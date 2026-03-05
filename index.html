@@ -369,9 +369,19 @@ body {
   color: var(--accent-purple);
 }
 
-.tag-owner.ammar {
-  background: rgba(245, 158, 11, 0.15);
-  color: var(--accent-amber);
+.tag-owner.ops-manager {
+  background: rgba(20, 184, 166, 0.15);
+  color: #14b8a6;
+}
+
+.tag-owner.sales-manager {
+  background: rgba(251, 113, 133, 0.15);
+  color: #fb7185;
+}
+
+.tag-owner.recruiting-manager {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
 }
 
 .tag-category {
@@ -529,7 +539,9 @@ body {
   <button class="filter-btn" onclick="filterOwner('jake', this)">Jake</button>
   <button class="filter-btn" onclick="filterOwner('mimir', this)">Mimir</button>
   <button class="filter-btn" onclick="filterOwner('josh', this)">Josh</button>
-  <button class="filter-btn" onclick="filterOwner('ammar', this)">Ammar</button>
+  <button class="filter-btn" onclick="filterOwner('ops-manager', this)">Ops Manager</button>
+  <button class="filter-btn" onclick="filterOwner('sales-manager', this)">Sales Manager</button>
+  <button class="filter-btn" onclick="filterOwner('recruiting-manager', this)">Recruiting Manager</button>
   <div class="filter-divider"></div>
   <span class="filter-label">Priority:</span>
   <button class="filter-btn active" onclick="filterPriority('all', this)">All</button>
@@ -637,7 +649,9 @@ body {
     <span style="color: var(--accent-blue)">■</span> Jake
     <span style="color: var(--accent-cyan); margin-left: 8px;">■</span> Mimir
     <span style="color: var(--accent-purple); margin-left: 8px;">■</span> Josh
-    <span style="color: var(--accent-amber); margin-left: 8px;">■</span> Ammar
+    <span style="color: #14b8a6; margin-left: 8px;">■</span> Ops Mgr
+    <span style="color: #fb7185; margin-left: 8px;">■</span> Sales Mgr
+    <span style="color: #fbbf24; margin-left: 8px;">■</span> Recruiting Mgr
   </div>
 </div>
 
@@ -969,7 +983,9 @@ function createCard(task) {
 
   const ownerClass = task.owner === 'mimir' ? 'mimir' : 
                      task.owner === 'josh' ? 'josh' : 
-                     task.owner === 'ammar' ? 'ammar' : '';
+                     task.owner === 'ops-manager' ? 'ops-manager' :
+                     task.owner === 'sales-manager' ? 'sales-manager' :
+                     task.owner === 'recruiting-manager' ? 'recruiting-manager' : '';
 
   return `
     <div class="card" data-owner="${task.owner}" data-priority="${task.priority}">
