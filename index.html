@@ -490,6 +490,273 @@ body {
     gap: 10px;
   }
 }
+
+/* ─── DETAIL PANEL ─── */
+.panel-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 200;
+  backdrop-filter: blur(4px);
+}
+
+.panel-overlay.open { display: block; }
+
+.detail-panel {
+  position: fixed;
+  top: 0;
+  right: -520px;
+  width: 500px;
+  height: 100vh;
+  background: #12121a;
+  border-left: 1px solid #2a2a3a;
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+  transition: right 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.detail-panel.open { right: 0; }
+
+.panel-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #2a2a3a;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.panel-header-left { flex: 1; min-width: 0; }
+
+.panel-id {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: #555570;
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+}
+
+.panel-title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #e8e8f0;
+}
+
+.panel-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.panel-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid #2a2a3a;
+  background: transparent;
+  color: #8888a0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  transition: all 0.15s;
+}
+
+.panel-btn:hover { background: #1a1a25; color: #e8e8f0; border-color: #4a7cff; }
+.panel-btn.copied { border-color: #34d399; color: #34d399; }
+
+.panel-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 24px;
+  border-bottom: 1px solid #1e1e2e;
+  flex-shrink: 0;
+}
+
+.panel-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.panel-badge.status-progress { background: rgba(34,211,238,0.1); color: #22d3ee; border-color: rgba(34,211,238,0.2); }
+.panel-badge.status-blocked  { background: rgba(239,68,68,0.1);  color: #ef4444; border-color: rgba(239,68,68,0.2); }
+.panel-badge.status-queued   { background: rgba(74,124,255,0.1); color: #4a7cff; border-color: rgba(74,124,255,0.2); }
+.panel-badge.status-review   { background: rgba(167,139,250,0.1);color: #a78bfa; border-color: rgba(167,139,250,0.2);}
+.panel-badge.status-done     { background: rgba(52,211,153,0.1); color: #34d399; border-color: rgba(52,211,153,0.2);}
+.panel-badge.status-backlog  { background: rgba(136,136,160,0.1);color: #8888a0; border-color: rgba(136,136,160,0.2);}
+
+.panel-badge.priority-ui { background: rgba(239,68,68,0.1); color: #ef4444; }
+.panel-badge.priority-ui.important { background: rgba(245,158,11,0.1); color: #f59e0b; }
+.panel-badge.priority-ui.urgent    { background: rgba(74,124,255,0.1); color: #4a7cff; }
+.panel-badge.priority-ui.low       { background: rgba(136,136,160,0.1); color: #8888a0; }
+
+.panel-badge.owner-jake        { background: rgba(74,124,255,0.1);  color: #4a7cff; }
+.panel-badge.owner-mimir       { background: rgba(34,211,238,0.1);  color: #22d3ee; }
+.panel-badge.owner-josh        { background: rgba(167,139,250,0.1); color: #a78bfa; }
+.panel-badge.owner-ops-manager { background: rgba(20,184,166,0.1);  color: #14b8a6; }
+.panel-badge.owner-sales-manager      { background: rgba(251,113,133,0.1); color: #fb7185; }
+.panel-badge.owner-recruiting-manager { background: rgba(251,191,36,0.1);  color: #fbbf24; }
+
+.panel-badge.due-badge { background: rgba(136,136,160,0.1); color: #8888a0; }
+.panel-badge.due-badge.overdue { background: rgba(239,68,68,0.1); color: #ef4444; }
+.panel-badge.due-badge.today   { background: rgba(245,158,11,0.1); color: #f59e0b; }
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.panel-body::-webkit-scrollbar { width: 4px; }
+.panel-body::-webkit-scrollbar-track { background: transparent; }
+.panel-body::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 2px; }
+
+.panel-section {
+  padding: 18px 24px;
+  border-bottom: 1px solid #1e1e2e;
+}
+
+.panel-section:last-child { border-bottom: none; }
+
+.panel-section-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #555570;
+  margin-bottom: 10px;
+}
+
+.panel-description {
+  font-size: 13px;
+  color: #a0a0b8;
+  line-height: 1.6;
+}
+
+.panel-blocker {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #ef4444;
+  line-height: 1.5;
+}
+
+/* Subtasks */
+.subtask-list { display: flex; flex-direction: column; gap: 6px; }
+
+.subtask-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 5px;
+  background: #1a1a25;
+  border: 1px solid #1e1e2e;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.subtask-item:hover { background: #22222f; }
+.subtask-item.done-task { opacity: 0.5; }
+
+.subtask-checkbox {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 2px solid #2a2a3a;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  transition: all 0.15s;
+}
+
+.subtask-item.done-task .subtask-checkbox {
+  background: #34d399;
+  border-color: #34d399;
+  color: #0a0a0f;
+}
+
+.subtask-text {
+  font-size: 12px;
+  color: #c0c0d8;
+  flex: 1;
+  line-height: 1.4;
+}
+
+.subtask-item.done-task .subtask-text {
+  text-decoration: line-through;
+  color: #555570;
+}
+
+.subtask-progress {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: #555570;
+  margin-bottom: 8px;
+}
+
+/* Docs */
+.docs-list { display: flex; flex-direction: column; gap: 6px; }
+
+.doc-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 5px;
+  background: #1a1a25;
+  border: 1px solid #1e1e2e;
+  text-decoration: none;
+  color: #4a7cff;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+.doc-link:hover { background: #22222f; border-color: #4a7cff; }
+.doc-icon { font-size: 13px; }
+
+/* Notes */
+.panel-notes {
+  font-size: 12px;
+  color: #8888a0;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  font-style: italic;
+  background: #1a1a25;
+  border-radius: 6px;
+  padding: 12px;
+  border: 1px solid #1e1e2e;
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .detail-panel {
+    width: 100vw;
+    right: -100vw;
+  }
+}
+
+/* Card clickable */
+.card { cursor: pointer; }
+.card:active { transform: scale(0.99); }
+
 </style>
 </head>
 <body>
@@ -655,6 +922,24 @@ body {
   </div>
 </div>
 
+
+<!-- ─── DETAIL PANEL ─── -->
+<div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
+<div class="detail-panel" id="detailPanel">
+  <div class="panel-header">
+    <div class="panel-header-left">
+      <div class="panel-id" id="panelId"></div>
+      <div class="panel-title" id="panelTitle"></div>
+    </div>
+    <div class="panel-actions">
+      <button class="panel-btn" id="copyLinkBtn" onclick="copyLink()" title="Copy link">🔗</button>
+      <button class="panel-btn" onclick="closePanel()" title="Close">✕</button>
+    </div>
+  </div>
+  <div class="panel-meta" id="panelMeta"></div>
+  <div class="panel-body" id="panelBody"></div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════════════════
 // TSL COMMAND CENTER — TASK DATA
@@ -671,7 +956,11 @@ const TASKS = [
     owner: "jake",
     category: "Mimir",
     due: null,
-    blocker: null
+    blocker: null,
+    description: "Set up automated desktop workflows via CoWork to reduce repetitive manual tasks.",
+    subtasks: [],
+    docs: [],
+    notes: null
   },
   {
     id: "TSL-021",
@@ -681,7 +970,17 @@ const TASKS = [
     owner: "jake",
     category: "Growth",
     due: null,
-    blocker: null
+    blocker: null,
+    description: "Build a full cold outreach stack: Apollo for prospecting, Hunter for email verification, Instantly for sequencing. Target C-Suite ICP: $200K+/mo rev, 60+ appts, 1-2 salespeople, dialed marketing.",
+    subtasks: [
+      { text: "Set up Apollo account + ICP filters", done: false },
+      { text: "Connect Hunter for email verification", done: false },
+      { text: "Configure Instantly sequences", done: false },
+      { text: "Build 5-touch outreach sequence", done: false },
+      { text: "Test and launch first campaign", done: false }
+    ],
+    docs: [],
+    notes: null
   },
   {
     id: "TSL-022",
@@ -691,7 +990,11 @@ const TASKS = [
     owner: "jake",
     category: "Growth",
     due: null,
-    blocker: null
+    blocker: null,
+    description: "Build an AI-powered conversation agent inside GHL to handle inbound C-Suite pipeline inquiries, qualify leads, and book discovery calls automatically.",
+    subtasks: [],
+    docs: [],
+    notes: null
   },
 
   // ── QUEUED ──
@@ -703,7 +1006,16 @@ const TASKS = [
     owner: "mimir",
     category: "Content",
     due: "2026-03-10",
-    blocker: null
+    blocker: null,
+    description: "Build a system where each video Jake records gets automatically repurposed into LinkedIn posts, email snippets, short clips, quote cards, and blog content. Mimir handles the processing pipeline.",
+    subtasks: [
+      { text: "Define asset types to generate per video", done: false },
+      { text: "Build Mimir video-to-content skill", done: false },
+      { text: "Set up output folder structure", done: false },
+      { text: "Test with one existing TSL video", done: false }
+    ],
+    docs: [],
+    notes: null
   },
   {
     id: "TSL-016",
@@ -713,7 +1025,11 @@ const TASKS = [
     owner: "mimir",
     category: "Growth",
     due: "2026-03-10",
-    blocker: null
+    blocker: null,
+    description: "Establish a weekly conversion rate optimization cycle for Champion Circle ($18K/6mo) and Sales Arena ($6K) funnels. Track, test, and iterate on landing pages, ads, and sequences.",
+    subtasks: [],
+    docs: [],
+    notes: null
   },
   {
     id: "TSL-017",
@@ -723,7 +1039,16 @@ const TASKS = [
     owner: "mimir",
     category: "Sales Ops",
     due: "2026-03-12",
-    blocker: null
+    blocker: null,
+    description: "Build a HubSpot lead scoring system that automatically ranks inbound leads by fit score (company revenue, team size, ad spend, industry) to prioritize outreach.",
+    subtasks: [
+      { text: "Define scoring criteria and weights", done: false },
+      { text: "Set up HubSpot scoring properties", done: false },
+      { text: "Build automation workflows for scoring", done: false },
+      { text: "Test with existing pipeline", done: false }
+    ],
+    docs: [],
+    notes: null
   },
   {
     id: "TSL-023",
@@ -733,7 +1058,15 @@ const TASKS = [
     owner: "jake",
     category: "Client",
     due: null,
-    blocker: null
+    blocker: null,
+    description: "Set up a meeting with Mason to review and build out the marketing strategy for Zacharin Consulting. Currently at $8,450/mo — need to diagnose lead flow and marketing plan.",
+    subtasks: [
+      { text: "Find a time with Mason", done: false },
+      { text: "Prep current Zacharin metrics for review", done: false },
+      { text: "Draft marketing plan outline", done: false }
+    ],
+    docs: [],
+    notes: "Zacharin is underperforming at $8,450 Jan. Need stronger lead acquisition strategy."
   },
   {
     id: "TSL-024",
@@ -743,7 +1076,14 @@ const TASKS = [
     owner: "jake",
     category: "Client",
     due: null,
-    blocker: null
+    blocker: null,
+    description: "Meet with Mason to go over the KB Tax Advisors marketing plan. KB is at $6K/mo retainer with $216K Jan revenue — strong performer, optimize further.",
+    subtasks: [
+      { text: "Book time with Mason", done: false },
+      { text: "Pull KB Tax Jan/Feb performance data", done: false }
+    ],
+    docs: [],
+    notes: null
   },
 
   // ── IN PROGRESS ──
@@ -755,7 +1095,19 @@ const TASKS = [
     owner: "jake",
     category: "Hiring",
     due: "2026-03-05",
-    blocker: null
+    blocker: null,
+    description: "Final stretch of Sales Director hiring. 6-step process: Application → PI → Homework 1 → First interview → Homework 2 (call reviews) → Final interview. Target profile: Mechanic + architect — diagnose problems AND build systems. Captain/Persuader PI type with B > +0.8σ.",
+    subtasks: [
+      { text: "Sal Leone interview — 2 PM today", done: false },
+      { text: "Final interview: Greg Minor", done: false },
+      { text: "Final interview: Evan Sforzo", done: false },
+      { text: "Final interview: Joseph Anderson", done: false },
+      { text: "Make final hire decision", done: false },
+      { text: "Send offer letter", done: false },
+      { text: "Send rejections to all others (~30)", done: false }
+    ],
+    docs: [],
+    notes: "Top 3 finalists: Greg Minor, Evan Sforzo, Joseph Anderson. Ryan Pouwells interviewed Mar 4. JT (Jordan Lane) — not a fit. Jasmine Corbet — accepted different position."
   },
   {
     id: "TSL-003",
@@ -765,7 +1117,16 @@ const TASKS = [
     owner: "jake",
     category: "C-Suite",
     due: "2026-03-07",
-    blocker: null
+    blocker: null,
+    description: "Execute the C-Suite prospecting playbook: 13 outreach touches/day, 1-hour block Mon-Fri. Two tracks: Agency partners (high leverage, slower) + Direct ICP outreach (25-30 qualified prospects). Training sessions ARE the sales call — never pitch fractional.",
+    subtasks: [
+      { text: "Identify 25-30 qualified ICP prospects", done: false },
+      { text: "Start LinkedIn connection sequence", done: false },
+      { text: "Book first training session / discovery call", done: false },
+      { text: "Track 13 touches/day in HubSpot", done: false }
+    ],
+    docs: [],
+    notes: "5-Touch Sequence: LinkedIn connection → DM ($30M credential) → Follow-up (case study) → Phone call → Breakup. Goal: 4 training sessions/month."
   },
   {
     id: "TSL-004",
@@ -775,7 +1136,15 @@ const TASKS = [
     owner: "jake",
     category: "C-Suite",
     due: "2026-03-07",
-    blocker: null
+    blocker: null,
+    description: "Record a training video walking Apolo and Ammar through how to use the Traffic Light System. System is built and skill drips are loaded. Video + SOP needed before Apolo's departure end of March.",
+    subtasks: [
+      { text: "Record training video (Loom)", done: false },
+      { text: "Upload to shared drive / Slack", done: false },
+      { text: "Send to Apolo + Ammar with instructions", done: false }
+    ],
+    docs: [],
+    notes: "Apolo leaving end of March — get this done ASAP so handoff is clean."
   },
   {
     id: "TSL-005",
@@ -785,7 +1154,17 @@ const TASKS = [
     owner: "jake",
     category: "C-Suite",
     due: "2026-03-07",
-    blocker: null
+    blocker: null,
+    description: "Finalize and organize all four C-Suite playbooks into one clean master folder. These docs are the backbone of the C-Suite delivery model.",
+    subtasks: [
+      { text: "Finalize C-Suite Master Playbook", done: false },
+      { text: "Finalize Sales Manager Playbook", done: false },
+      { text: "Finalize Onboarding Playbook", done: false },
+      { text: "Finalize Recruiting Playbook", done: false },
+      { text: "Organize all into one Google Drive folder", done: false }
+    ],
+    docs: [],
+    notes: "V3 of C-Suite playbook is at /Users/jake/.openclaw/workspace/projects/c-suite-playbook/. Needs final review and Google Drive organization."
   },
   {
     id: "TSL-006",
@@ -795,7 +1174,16 @@ const TASKS = [
     owner: "jake",
     category: "Client",
     due: "2026-03-05",
-    blocker: null
+    blocker: null,
+    description: "Set up AI scoring system for Estimate Mastery (new client, onboarded Feb 26). Josh's SOP has been received. Configure AI workflows for automated lead/call scoring.",
+    subtasks: [
+      { text: "Review Josh's SOP", done: false },
+      { text: "Configure AI scoring workflow in GHL", done: false },
+      { text: "Test scoring on sample calls", done: false },
+      { text: "Brief Estimate Mastery team on system", done: false }
+    ],
+    docs: [],
+    notes: "Was blocked waiting on SOP from Josh — now unblocked as of Mar 5."
   },
   {
     id: "TSL-025",
@@ -805,7 +1193,17 @@ const TASKS = [
     owner: "mimir",
     category: "Client",
     due: "2026-03-05",
-    blocker: null
+    blocker: null,
+    description: "Build a re-engagement sequence for Estimate Mastery to re-activate cold/unresponsive leads and drive additional booked appointments. Estimate Mastery is a new C-Suite client — boosting their show rate from 50% → 75% = instant 50% increase in consults.",
+    subtasks: [
+      { text: "Get offer details and ICP from Jake", done: false },
+      { text: "Draft 5-step re-engagement sequence", done: false },
+      { text: "Write copy for each message", done: false },
+      { text: "Set up in GHL workflow", done: false },
+      { text: "Review + approve with Jake", done: false }
+    ],
+    docs: [],
+    notes: "Key metric: show rate currently 50%. Target 75%. Re-engagement is fastest lever to move this."
   },
   {
     id: "TSL-026",
@@ -815,7 +1213,17 @@ const TASKS = [
     owner: "mimir",
     category: "C-Suite",
     due: "2026-03-07",
-    blocker: null
+    blocker: null,
+    description: "Write a clean, step-by-step SOP for the Traffic Light System that Apolo and Ammar can reference alongside the training video. Rep status: Green (performing) / Yellow (needs attention) / Red (struggling).",
+    subtasks: [
+      { text: "Draft SOP outline", done: false },
+      { text: "Document weekly classification process", done: false },
+      { text: "Document escalation triggers and responses", done: false },
+      { text: "Add examples for each color tier", done: false },
+      { text: "Format and deliver to Jake for review", done: false }
+    ],
+    docs: [],
+    notes: "Launch protocol: Sales Director + Sales Ops meet weekly, classify reps, post Slack accountability updates Friday."
   },
   {
     id: "TSL-027",
@@ -825,7 +1233,16 @@ const TASKS = [
     owner: "jake",
     category: "Hiring",
     due: "2026-03-07",
-    blocker: null
+    blocker: null,
+    description: "Review the interviews Ammar has conducted and provide coaching feedback to sharpen his interview process and evaluation consistency.",
+    subtasks: [
+      { text: "Review Ammar's interview recordings/notes", done: false },
+      { text: "Score against hiring rubric", done: false },
+      { text: "Prepare coaching feedback", done: false },
+      { text: "Meet with Ammar for coaching session", done: false }
+    ],
+    docs: [],
+    notes: null
   },
   {
     id: "TSL-028",
@@ -835,7 +1252,15 @@ const TASKS = [
     owner: "mimir",
     category: "Hiring",
     due: "2026-03-05",
-    blocker: "Waiting on transcripts from Jake"
+    blocker: "Waiting on transcripts from Jake",
+    description: "Jake conducted several Sales Director interviews. Once transcripts are sent, Mimir will extract key notes and update each candidate's HubSpot contact record.",
+    subtasks: [
+      { text: "Receive transcripts from Jake", done: false },
+      { text: "Extract key notes per candidate", done: false },
+      { text: "Update HubSpot contact records", done: false }
+    ],
+    docs: [],
+    notes: "Jake to drop transcripts in Telegram. Mimir processes and updates HubSpot immediately."
   },
 
   // ── BLOCKED ──
@@ -847,7 +1272,16 @@ const TASKS = [
     owner: "jake",
     category: "Marketing",
     due: "2026-03-06",
-    blocker: "Need launch plan/assets"
+    blocker: "Need launch plan and creative assets",
+    description: "Launch Facebook/Meta market research ads to identify the best-performing angle for the next TSL event. These ads gather data cheaply before scaling ad spend.",
+    subtasks: [
+      { text: "Define event concept and target audience", done: false },
+      { text: "Create ad creative assets", done: false },
+      { text: "Set up campaign in Ads Manager", done: false },
+      { text: "Launch and monitor for 48-72 hours", done: false }
+    ],
+    docs: [],
+    notes: null
   },
 
   // ── REVIEW ──
@@ -859,7 +1293,16 @@ const TASKS = [
     owner: "jake",
     category: "Hiring",
     due: "2026-03-05",
-    blocker: null
+    blocker: null,
+    description: "Approve the rejection email template drafted by Mimir, save to templates folder, then blast to ~30 declined Sales Director applicants via HubSpot.",
+    subtasks: [
+      { text: "Review Mimir draft", done: true },
+      { text: "Approve or request edits", done: false },
+      { text: "Save to templates folder", done: false },
+      { text: "Send to ~30 declined applicants via HubSpot", done: false }
+    ],
+    docs: [],
+    notes: "Draft: warm, professional, leaves door open. Subject: 'Your Application with The Sales League'"
   },
   {
     id: "TSL-011",
@@ -869,7 +1312,14 @@ const TASKS = [
     owner: "jake",
     category: "Hiring",
     due: "2026-03-05",
-    blocker: null
+    blocker: null,
+    description: "Call Jordan Lane (JT) to deliver the final decision. JT submitted homework but was determined not to be a fit for Sales Director. Needs a personal call, not just an email.",
+    subtasks: [
+      { text: "Call JT with decision", done: false },
+      { text: "Update HubSpot contact record", done: false }
+    ],
+    docs: [],
+    notes: "JT is not a fit for Sales Director. Deliver with respect — he put in the effort."
   },
 
   // ── DONE ──
@@ -881,7 +1331,11 @@ const TASKS = [
     owner: "jake",
     category: "Marketing",
     due: null,
-    blocker: null
+    blocker: null,
+    description: "Final day text reminders sent to all 8 paid Closers Playbook Event registrants (Mar 3-5).",
+    subtasks: [],
+    docs: [],
+    notes: "All 8 reached. This was the 3rd touchpoint (call Mar 2 → video Mar 3 → text Mar 5)."
   },
   {
     id: "TSL-037",
@@ -891,7 +1345,11 @@ const TASKS = [
     owner: "jake",
     category: "C-Suite",
     due: null,
-    blocker: null
+    blocker: null,
+    description: "Completed adding all skill drips to the Traffic Light System.",
+    subtasks: [],
+    docs: [],
+    notes: null
   },
   {
     id: "TSL-030",
@@ -901,7 +1359,11 @@ const TASKS = [
     owner: "jake",
     category: "Mimir",
     due: null,
-    blocker: null
+    blocker: null,
+    description: "Recovered from gateway crash loop caused by MEMORY.md exceeding 20,000 character limit. Cleared sessions, reduced MEMORY.md from 25K to 8K chars.",
+    subtasks: [],
+    docs: [],
+    notes: null
   },
   {
     id: "TSL-031",
@@ -911,7 +1373,11 @@ const TASKS = [
     owner: "jake",
     category: "Mimir",
     due: null,
-    blocker: null
+    blocker: null,
+    description: "Updated OpenClaw gateway to version 2026.3.2.",
+    subtasks: [],
+    docs: [],
+    notes: null
   },
   {
     id: "TSL-032",
@@ -921,7 +1387,11 @@ const TASKS = [
     owner: "jake",
     category: "Mimir",
     due: null,
-    blocker: null
+    blocker: null,
+    description: "Configured ollama/llama3.2 as the primary fallback model (replaces GPT-5.1 Codex). Tested successfully via sub-agent spawn.",
+    subtasks: [],
+    docs: [],
+    notes: "Fallback order: ollama/llama3.2 → claude-opus-4-6 → gpt-5.1-codex"
   },
   {
     id: "TSL-033",
@@ -931,7 +1401,11 @@ const TASKS = [
     owner: "jake",
     category: "Security",
     due: null,
-    blocker: null
+    blocker: null,
+    description: "Rotated exposed API key after accidental exposure in session.",
+    subtasks: [],
+    docs: [],
+    notes: null
   },
   {
     id: "TSL-034",
@@ -941,7 +1415,11 @@ const TASKS = [
     owner: "mimir",
     category: "Strategy",
     due: null,
-    blocker: null
+    blocker: null,
+    description: "Completed analysis of Ganzak playbook for TSL strategic reference.",
+    subtasks: [],
+    docs: [],
+    notes: null
   },
   {
     id: "TSL-035",
@@ -951,7 +1429,11 @@ const TASKS = [
     owner: "mimir",
     category: "Mimir",
     due: null,
-    blocker: null
+    blocker: null,
+    description: "Built Phase 3 skill suite: transcript-processor, scorecard-review, call-review, client-onboarding, cold-outreach-writer, weekly-report, hiring-evaluator.",
+    subtasks: [],
+    docs: [],
+    notes: null
   }
 ];
 
@@ -961,6 +1443,18 @@ const TASKS = [
 
 let activeOwnerFilter = 'all';
 let activePriorityFilter = 'all';
+
+// Subtask state (in-memory toggle, resets on reload)
+const subtaskState = {};
+
+function getOwnerLabel(owner) {
+  const map = {
+    jake: 'Jake', mimir: 'Mimir', josh: 'Josh',
+    'ops-manager': 'Ops Mgr', 'sales-manager': 'Sales Mgr',
+    'recruiting-manager': 'Recruiting Mgr'
+  };
+  return map[owner] || owner;
+}
 
 function createCard(task) {
   const today = new Date().toISOString().split('T')[0];
@@ -988,7 +1482,7 @@ function createCard(task) {
                      task.owner === 'recruiting-manager' ? 'recruiting-manager' : '';
 
   return `
-    <div class="card" data-owner="${task.owner}" data-priority="${task.priority}">
+    <div class="card" data-owner="${task.owner}" data-priority="${task.priority}" onclick="openPanel('${task.id}')">
       <div class="card-priority ${task.priority}"></div>
       <div class="card-top">
         <div class="card-title">${task.title}</div>
@@ -997,7 +1491,7 @@ function createCard(task) {
       ${task.blocker ? `<div class="card-blocker">${task.blocker}</div>` : ''}
       <div class="card-meta">
         <div class="card-tags">
-          <span class="tag tag-owner ${ownerClass}">${task.owner}</span>
+          <span class="tag tag-owner ${ownerClass}">${getOwnerLabel(task.owner)}</span>
           <span class="tag tag-category">${task.category}</span>
         </div>
         ${dueText ? `<div class="card-due ${dueClass}">${dueText}</div>` : ''}
@@ -1022,7 +1516,6 @@ function render() {
     if (columns[t.status]) columns[t.status].push(t);
   });
 
-  // Sort: urgent-important first, then important, then urgent, then low
   const priorityOrder = { 'urgent-important': 0, 'important': 1, 'urgent': 2, 'low': 3 };
   Object.keys(columns).forEach(col => {
     columns[col].sort((a, b) => (priorityOrder[a.priority] || 3) - (priorityOrder[b.priority] || 3));
@@ -1042,7 +1535,6 @@ function render() {
   document.getElementById('countReview').textContent = columns.review.length;
   document.getElementById('countDone').textContent = columns.done.length;
 
-  // Update metrics
   const active = TASKS.filter(t => t.status !== 'done');
   document.getElementById('metricUrgent').textContent = active.filter(t => t.priority === 'urgent-important').length;
   document.getElementById('metricProgress').textContent = TASKS.filter(t => t.status === 'progress').length;
@@ -1050,11 +1542,170 @@ function render() {
   document.getElementById('metricDone').textContent = TASKS.filter(t => t.status === 'done').length;
   document.getElementById('metricTotal').textContent = active.length;
 
-  // Update timestamp
   const now = new Date();
   document.getElementById('lastUpdated').textContent = 
     `Updated: ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
 }
+
+// ══════════════════════════════════════════════════════════════
+// DETAIL PANEL
+// ══════════════════════════════════════════════════════════════
+
+function openPanel(taskId) {
+  const task = TASKS.find(t => t.id === taskId);
+  if (!task) return;
+
+  // Set hash
+  history.replaceState(null, '', '#' + taskId);
+
+  // Header
+  document.getElementById('panelId').textContent = task.id + ' · ' + task.category;
+  document.getElementById('panelTitle').textContent = task.title;
+
+  // Meta badges
+  const today = new Date().toISOString().split('T')[0];
+  let dueBadge = '';
+  if (task.due) {
+    let dueClass = 'due-badge';
+    let dueLabel = task.due;
+    if (task.due < today) { dueClass += ' overdue'; dueLabel = 'Overdue: ' + task.due; }
+    else if (task.due === today) { dueClass += ' today'; dueLabel = 'Due Today'; }
+    dueBadge = `<span class="panel-badge ${dueClass}">📅 ${dueLabel}</span>`;
+  }
+
+  const priorityLabels = { 'urgent-important': '🔴 Urgent + Important', 'important': '🟡 Important', 'urgent': '🔵 Urgent', 'low': '⚪ Low' };
+  const priorityClasses = { 'urgent-important': '', 'important': 'important', 'urgent': 'urgent', 'low': 'low' };
+
+  document.getElementById('panelMeta').innerHTML = `
+    <span class="panel-badge status-${task.status}">${task.status.toUpperCase()}</span>
+    <span class="panel-badge priority-ui ${priorityClasses[task.priority]}">${priorityLabels[task.priority] || task.priority}</span>
+    <span class="panel-badge owner-${task.owner}">👤 ${getOwnerLabel(task.owner)}</span>
+    ${dueBadge}
+  `;
+
+  // Body
+  let bodyHTML = '';
+
+  // Description
+  if (task.description) {
+    bodyHTML += `
+      <div class="panel-section">
+        <div class="panel-section-title">Description</div>
+        <div class="panel-description">${task.description}</div>
+      </div>`;
+  }
+
+  // Blocker
+  if (task.blocker) {
+    bodyHTML += `
+      <div class="panel-section">
+        <div class="panel-section-title">🚫 Blocker</div>
+        <div class="panel-blocker">${task.blocker}</div>
+      </div>`;
+  }
+
+  // Subtasks
+  if (task.subtasks && task.subtasks.length > 0) {
+    const stateKey = task.id;
+    if (!subtaskState[stateKey]) {
+      subtaskState[stateKey] = task.subtasks.map(s => s.done);
+    }
+    const states = subtaskState[stateKey];
+    const doneCount = states.filter(Boolean).length;
+    const total = states.length;
+
+    const items = task.subtasks.map((s, i) => {
+      const isDone = states[i];
+      return `<div class="subtask-item ${isDone ? 'done-task' : ''}" onclick="toggleSubtask('${task.id}', ${i})">
+        <div class="subtask-checkbox">${isDone ? '✓' : ''}</div>
+        <div class="subtask-text">${s.text}</div>
+      </div>`;
+    }).join('');
+
+    bodyHTML += `
+      <div class="panel-section">
+        <div class="panel-section-title">Subtasks</div>
+        <div class="subtask-progress">${doneCount}/${total} complete</div>
+        <div class="subtask-list">${items}</div>
+      </div>`;
+  }
+
+  // Docs
+  if (task.docs && task.docs.length > 0) {
+    const links = task.docs.map(d => 
+      `<a class="doc-link" href="${d.url}" target="_blank">
+        <span class="doc-icon">📄</span>${d.label}
+      </a>`
+    ).join('');
+    bodyHTML += `
+      <div class="panel-section">
+        <div class="panel-section-title">Docs & Links</div>
+        <div class="docs-list">${links}</div>
+      </div>`;
+  }
+
+  // Notes
+  if (task.notes) {
+    bodyHTML += `
+      <div class="panel-section">
+        <div class="panel-section-title">Notes</div>
+        <div class="panel-notes">${task.notes}</div>
+      </div>`;
+  }
+
+  if (!bodyHTML) {
+    bodyHTML = `<div class="panel-section"><div class="panel-description" style="color:#555570">No additional details yet.</div></div>`;
+  }
+
+  document.getElementById('panelBody').innerHTML = bodyHTML;
+
+  // Open
+  document.getElementById('panelOverlay').classList.add('open');
+  document.getElementById('detailPanel').classList.add('open');
+  document.getElementById('copyLinkBtn').classList.remove('copied');
+}
+
+function closePanel() {
+  document.getElementById('panelOverlay').classList.remove('open');
+  document.getElementById('detailPanel').classList.remove('open');
+  history.replaceState(null, '', window.location.pathname);
+}
+
+function toggleSubtask(taskId, index) {
+  if (!subtaskState[taskId]) {
+    const task = TASKS.find(t => t.id === taskId);
+    subtaskState[taskId] = task.subtasks.map(s => s.done);
+  }
+  subtaskState[taskId][index] = !subtaskState[taskId][index];
+  openPanel(taskId); // re-render panel
+}
+
+function copyLink() {
+  const url = window.location.href;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('copyLinkBtn');
+    btn.classList.add('copied');
+    btn.textContent = '✓';
+    setTimeout(() => { btn.textContent = '🔗'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// Keyboard close
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closePanel();
+});
+
+// Hash routing on load
+window.addEventListener('load', () => {
+  const hash = window.location.hash.slice(1);
+  if (hash && TASKS.find(t => t.id === hash)) {
+    openPanel(hash);
+  }
+});
+
+// ══════════════════════════════════════════════════════════════
+// FILTERS
+// ══════════════════════════════════════════════════════════════
 
 function filterOwner(owner, btn) {
   activeOwnerFilter = owner;
