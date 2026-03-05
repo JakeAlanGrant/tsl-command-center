@@ -1197,9 +1197,9 @@ const TASKS = [
     category: "Client",
     due: "2026-03-05",
     blocker: null,
-    description: "Build a re-engagement sequence for Estimate Mastery to re-activate cold/unresponsive leads and drive additional booked appointments. Estimate Mastery is a new C-Suite client — boosting their show rate from 50% → 75% = instant 50% increase in consults.",
+    description: "Re-engage old Estimate Mastery leads who never closed. Josh's angle: 'What if we told you you could be leaving $25-50K/month on deals you're already doing? Want a free audit call?' Roofers leave avg $4K/deal × 5-10 deals/month = $20-40K uncaptured. Target: unconverted pipeline leads.",
     subtasks: [
-      { text: "Get offer details and ICP from Jake", done: false },
+      { text: "Get offer details and ICP from Jake", done: true },
       { text: "Draft 5-step re-engagement sequence", done: false },
       { text: "Write copy for each message", done: false },
       { text: "Set up in GHL workflow", done: false },
@@ -1328,21 +1328,111 @@ const TASKS = [
   {
     id: "TSL-029",
     title: "Process Level 10 meeting transcript + Alena marketing meeting transcript",
-    status: "queued",
+    status: "progress",
     priority: "urgent",
     owner: "mimir",
     category: "Mimir",
     due: "2026-03-05",
-    blocker: "Waiting on transcripts from Jake",
+    blocker: null,
     description: "Jake to send two transcripts: (1) Level 10 meeting from today, (2) Alena (Estimate Mastery) marketing meeting. Mimir will process both into memory and extract key action items.",
     subtasks: [
-      { text: "Receive Level 10 meeting transcript", done: false },
-      { text: "Receive Alena marketing meeting transcript", done: false },
-      { text: "Save to daily memory file", done: false },
+      { text: "Receive Level 10 meeting transcript", done: true },
+      { text: "Receive Alena marketing meeting transcript", done: true },
+      { text: "Save to daily memory file", done: true },
       { text: "Extract action items + update board", done: false }
     ],
     docs: [],
     notes: "Alena meeting will unblock TSL-025 (re-engagement sequence). Level 10 may surface new tasks."
+  },
+
+  {
+    id: "TSL-038",
+    title: "Review Vinson's sales calls (San Diego AE candidate)",
+    status: "progress",
+    priority: "urgent-important",
+    owner: "jake",
+    category: "Hiring",
+    due: "2026-03-06",
+    blocker: null,
+    description: "Josh loves Vinson (San Diego) as a potential AE hire at Rainwater. He sold financial services and built a 30,000-member private equity network. Josh forwarded calls to Apolo for review. Evaluate to decide if he's ready to onboard mid-March (offboard Matt in April).",
+    subtasks: [
+      { text: "Listen to Vinson's sales calls", done: false },
+      { text: "Apolo review + feedback", done: false },
+      { text: "Make hire/no-hire decision", done: false }
+    ],
+    docs: [],
+    notes: "Josh's take: 'He presented so well. If he's a killer, I want to onboard him mid-March and offboard the worst performer in April.' Candidate sent his webinar as well."
+  },
+  {
+    id: "TSL-039",
+    title: "Meet with Mason — KB Tax + Zacharin show rate strategy",
+    status: "progress",
+    priority: "urgent-important",
+    owner: "jake",
+    category: "Client",
+    due: "2026-03-06",
+    blocker: null,
+    description: "Josh's directive from Level 10: Jake needs to meet with Mason and Tarron ASAP. Two goals: (1) Establish marketing leadership and authority at KB Tax — Mason is a media buyer, not a CMO. (2) Discuss 'hammer them' retargeting strategy to improve Zacharin show rate from 40% to 60%.",
+    subtasks: [
+      { text: "Schedule meeting with Mason + Tarron", done: false },
+      { text: "Review current retargeting/pre-call nurture setup", done: false },
+      { text: "Discuss 'hammer them' strategy for ZC show rate", done: false },
+      { text: "Send show rate strategy to Josh by EOD tomorrow", done: false }
+    ],
+    docs: [],
+    notes: "Josh: 'Nobody is a leader over there. Mason is a loved guy, not a leader. Somebody has to step in.' ZC show rate currently 40%, target 60%. Strategy: retargeting ads between booking and call that pre-handle objections."
+  },
+  {
+    id: "TSL-040",
+    title: "Estimate Mastery — HubSpot lead activity channel setup",
+    status: "queued",
+    priority: "urgent",
+    owner: "mimir",
+    category: "Client",
+    due: "2026-03-06",
+    blocker: null,
+    description: "Set up HubSpot lead activity channel for Estimate Mastery so new leads can be monitored in real time. SMO tag = self-book leads. Meta tag = Facebook leads (go to webinar, Favio calls them).",
+    subtasks: [
+      { text: "Set up SMO lead channel in HubSpot", done: false },
+      { text: "Set up Meta tag lead channel in HubSpot", done: false },
+      { text: "Test with incoming lead", done: false }
+    ],
+    docs: [],
+    notes: "From Alena meeting Mar 5. Ammar was originally assigned — now Mimir task."
+  },
+  {
+    id: "TSL-041",
+    title: "Estimate Mastery — get February ad performance data from Paul",
+    status: "queued",
+    priority: "urgent",
+    owner: "jake",
+    category: "Client",
+    due: "2026-03-06",
+    blocker: null,
+    description: "Paul spent $57K of Alena's ad budget in February and provided ZERO reporting. Jake needs to request a full February performance breakdown (CPM, CTR, hook rate, cost per booked call, opt-in rate, booked calls, closed deals).",
+    subtasks: [
+      { text: "Request February report from Paul", done: false },
+      { text: "Compare against January baseline", done: false }
+    ],
+    docs: [],
+    notes: "Historical benchmark: $350-400 cost per booked call (Alena managing), dipped to $270 best. Currently running very high. Andromeda update (Oct 2025) requires fresh creative — Paul hasn't provided new scripts."
+  },
+  {
+    id: "TSL-042",
+    title: "Make marketing agency introductions for Estimate Mastery",
+    status: "queued",
+    priority: "urgent-important",
+    owner: "jake",
+    category: "Client",
+    due: "2026-03-07",
+    blocker: null,
+    description: "Jake promised Alena introductions to marketing people by Friday so she can start conversations Monday. Find agencies that specialize in the contractor/home services space with proven paid social track records.",
+    subtasks: [
+      { text: "Identify 2-3 agency contacts", done: false },
+      { text: "Make introductions by Friday", done: false }
+    ],
+    docs: [],
+    notes: "Alena is close to firing Paul. Ad account just came back online Mar 5. She's open to new agency ASAP."
   },
 
   // ── DONE ──
