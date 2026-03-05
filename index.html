@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TSL Command Center</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #12121a;
+  --bg-card: #1a1a25;
+  --bg-card-hover: #22222f;
+  --border: #2a2a3a;
+  --border-subtle: #1e1e2e;
+  --text-primary: #e8e8f0;
+  --text-secondary: #8888a0;
+  --text-muted: #555570;
+  --accent-blue: #4a7cff;
+  --accent-green: #34d399;
+  --accent-amber: #f59e0b;
+  --accent-red: #ef4444;
+  --accent-purple: #a78bfa;
+  --accent-cyan: #22d3ee;
+  --col-backlog: #3b3b4f;
+  --col-queued: #2d3a5e;
+  --col-progress: #1e3a4a;
+  --col-blocked: #3d2020;
+  --col-review: #3a2d50;
+  --col-done: #1a3a2a;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: auto;
+}
+
+/* ─── HEADER ─── */
+.header {
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(20px);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo {
+  font-family: 'Space Mono', monospace;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: -0.5px;
+  color: var(--accent-blue);
+}
+
+.logo span {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.header-stats {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: 'Space Mono', monospace;
+}
+
+.stat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.stat-dot.green { background: var(--accent-green); }
+.stat-dot.amber { background: var(--accent-amber); }
+.stat-dot.red { background: var(--accent-red); }
+
+.last-updated {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'Space Mono', monospace;
+}
+
+/* ─── METRICS BAR ─── */
+.metrics-bar {
+  display: flex;
+  gap: 1px;
+  padding: 0;
+  background: var(--border-subtle);
+  border-bottom: 1px solid var(--border);
+}
+
+.metric {
+  flex: 1;
+  padding: 14px 20px;
+  background: var(--bg-secondary);
+  text-align: center;
+}
+
+.metric-value {
+  font-family: 'Space Mono', monospace;
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.metric-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+}
+
+/* ─── FILTER BAR ─── */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  padding: 14px 28px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-primary);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filter-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+
+.filter-btn {
+  padding: 5px 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.filter-btn:hover {
+  border-color: var(--accent-blue);
+  color: var(--text-primary);
+}
+
+.filter-btn.active {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: white;
+}
+
+.filter-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 4px;
+}
+
+/* ─── BOARD ─── */
+.board {
+  display: flex;
+  gap: 1px;
+  padding: 0;
+  min-height: calc(100vh - 200px);
+  background: var(--border-subtle);
+  overflow-x: auto;
+}
+
+.column {
+  flex: 1;
+  min-width: 280px;
+  max-width: 340px;
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+}
+
+.column-header {
+  padding: 16px 16px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 2px solid transparent;
+}
+
+.column-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.column-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-weight: 700;
+}
+
+.column-count {
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: var(--bg-card);
+}
+
+.column-wip {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.col-backlog .column-header { border-bottom-color: var(--col-backlog); }
+.col-backlog .column-title { color: #8888a0; }
+.col-backlog .column-count { color: #8888a0; }
+
+.col-queued .column-header { border-bottom-color: var(--accent-blue); }
+.col-queued .column-title { color: var(--accent-blue); }
+.col-queued .column-count { color: var(--accent-blue); }
+
+.col-progress .column-header { border-bottom-color: var(--accent-cyan); }
+.col-progress .column-title { color: var(--accent-cyan); }
+.col-progress .column-count { color: var(--accent-cyan); }
+
+.col-blocked .column-header { border-bottom-color: var(--accent-red); }
+.col-blocked .column-title { color: var(--accent-red); }
+.col-blocked .column-count { color: var(--accent-red); }
+
+.col-review .column-header { border-bottom-color: var(--accent-purple); }
+.col-review .column-title { color: var(--accent-purple); }
+.col-review .column-count { color: var(--accent-purple); }
+
+.col-done .column-header { border-bottom-color: var(--accent-green); }
+.col-done .column-title { color: var(--accent-green); }
+.col-done .column-count { color: var(--accent-green); }
+
+.column-cards {
+  padding: 8px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ─── CARDS ─── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 12px;
+  cursor: default;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border);
+}
+
+.card-priority {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  border-radius: 6px 0 0 6px;
+}
+
+.card-priority.urgent-important { background: var(--accent-red); }
+.card-priority.important { background: var(--accent-amber); }
+.card-priority.urgent { background: var(--accent-blue); }
+.card-priority.low { background: var(--text-muted); }
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+
+.card-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  flex: 1;
+  padding-left: 8px;
+}
+
+.card-id {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.card-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-left: 8px;
+}
+
+.card-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.tag-owner {
+  background: rgba(74, 124, 255, 0.15);
+  color: var(--accent-blue);
+}
+
+.tag-owner.mimir {
+  background: rgba(34, 211, 238, 0.15);
+  color: var(--accent-cyan);
+}
+
+.tag-owner.josh {
+  background: rgba(167, 139, 250, 0.15);
+  color: var(--accent-purple);
+}
+
+.tag-owner.ammar {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--accent-amber);
+}
+
+.tag-category {
+  background: rgba(255,255,255,0.05);
+  color: var(--text-secondary);
+}
+
+.card-due {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.card-due.overdue {
+  color: var(--accent-red);
+  font-weight: 700;
+}
+
+.card-due.today {
+  color: var(--accent-amber);
+  font-weight: 700;
+}
+
+.card-blocker {
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--accent-red);
+  padding-left: 12px;
+}
+
+.card-blocker::before {
+  content: "⚠ ";
+}
+
+/* ─── EISENHOWER LEGEND ─── */
+.legend {
+  display: flex;
+  gap: 16px;
+  padding: 12px 28px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-secondary);
+  position: sticky;
+  bottom: 0;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.legend-bar {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+/* ─── MOBILE ─── */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+  }
+
+  .header-stats { gap: 12px; }
+  
+  .metrics-bar {
+    flex-wrap: wrap;
+  }
+
+  .metric {
+    min-width: 33%;
+    flex: 1 1 33%;
+  }
+
+  .board {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .column {
+    min-width: 100%;
+    max-width: 100%;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .column-cards {
+    max-height: none;
+  }
+
+  .filter-bar {
+    padding: 10px 16px;
+  }
+
+  .legend {
+    padding: 10px 16px;
+    gap: 10px;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ─── HEADER ─── -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo">TSL<span> // Command Center</span></div>
+  </div>
+  <div class="header-stats">
+    <div class="stat">
+      <div class="stat-dot green"></div>
+      Mimir Online
+    </div>
+    <div class="last-updated" id="lastUpdated">Updated: loading...</div>
+  </div>
+</div>
+
+<!-- ─── METRICS ─── -->
+<div class="metrics-bar">
+  <div class="metric">
+    <div class="metric-value" style="color: var(--accent-red)" id="metricUrgent">3</div>
+    <div class="metric-label">Urgent</div>
+  </div>
+  <div class="metric">
+    <div class="metric-value" style="color: var(--accent-cyan)" id="metricProgress">4</div>
+    <div class="metric-label">In Progress</div>
+  </div>
+  <div class="metric">
+    <div class="metric-value" style="color: var(--accent-red)" id="metricBlocked">2</div>
+    <div class="metric-label">Blocked</div>
+  </div>
+  <div class="metric">
+    <div class="metric-value" style="color: var(--accent-green)" id="metricDone">6</div>
+    <div class="metric-label">Done (7d)</div>
+  </div>
+  <div class="metric">
+    <div class="metric-value" style="color: var(--text-secondary)" id="metricTotal">15</div>
+    <div class="metric-label">Total Active</div>
+  </div>
+</div>
+
+<!-- ─── FILTERS ─── -->
+<div class="filter-bar">
+  <span class="filter-label">Owner:</span>
+  <button class="filter-btn active" onclick="filterOwner('all', this)">All</button>
+  <button class="filter-btn" onclick="filterOwner('jake', this)">Jake</button>
+  <button class="filter-btn" onclick="filterOwner('mimir', this)">Mimir</button>
+  <button class="filter-btn" onclick="filterOwner('josh', this)">Josh</button>
+  <button class="filter-btn" onclick="filterOwner('ammar', this)">Ammar</button>
+  <div class="filter-divider"></div>
+  <span class="filter-label">Priority:</span>
+  <button class="filter-btn active" onclick="filterPriority('all', this)">All</button>
+  <button class="filter-btn" onclick="filterPriority('urgent-important', this)">🔴 Urgent+Imp</button>
+  <button class="filter-btn" onclick="filterPriority('important', this)">🟡 Important</button>
+  <button class="filter-btn" onclick="filterPriority('urgent', this)">🔵 Urgent</button>
+</div>
+
+<!-- ─── BOARD ─── -->
+<div class="board" id="board">
+
+  <!-- BACKLOG -->
+  <div class="column col-backlog">
+    <div class="column-header">
+      <div class="column-header-top">
+        <div class="column-title">Backlog</div>
+        <div class="column-count" id="countBacklog">0</div>
+      </div>
+      <div class="column-wip">Icebox — not yet scheduled</div>
+    </div>
+    <div class="column-cards" id="colBacklog"></div>
+  </div>
+
+  <!-- QUEUED -->
+  <div class="column col-queued">
+    <div class="column-header">
+      <div class="column-header-top">
+        <div class="column-title">Queued</div>
+        <div class="column-count" id="countQueued">0</div>
+      </div>
+      <div class="column-wip">Ready to start — this week</div>
+    </div>
+    <div class="column-cards" id="colQueued"></div>
+  </div>
+
+  <!-- IN PROGRESS -->
+  <div class="column col-progress">
+    <div class="column-header">
+      <div class="column-header-top">
+        <div class="column-title">In Progress</div>
+        <div class="column-count" id="countProgress">0</div>
+      </div>
+      <div class="column-wip">WIP limit: 5</div>
+    </div>
+    <div class="column-cards" id="colProgress"></div>
+  </div>
+
+  <!-- BLOCKED -->
+  <div class="column col-blocked">
+    <div class="column-header">
+      <div class="column-header-top">
+        <div class="column-title">Blocked</div>
+        <div class="column-count" id="countBlocked">0</div>
+      </div>
+      <div class="column-wip">Needs action to unblock</div>
+    </div>
+    <div class="column-cards" id="colBlocked"></div>
+  </div>
+
+  <!-- REVIEW -->
+  <div class="column col-review">
+    <div class="column-header">
+      <div class="column-header-top">
+        <div class="column-title">Review</div>
+        <div class="column-count" id="countReview">0</div>
+      </div>
+      <div class="column-wip">Awaiting approval</div>
+    </div>
+    <div class="column-cards" id="colReview"></div>
+  </div>
+
+  <!-- DONE -->
+  <div class="column col-done">
+    <div class="column-header">
+      <div class="column-header-top">
+        <div class="column-title">Done</div>
+        <div class="column-count" id="countDone">0</div>
+      </div>
+      <div class="column-wip">Last 7 days</div>
+    </div>
+    <div class="column-cards" id="colDone"></div>
+  </div>
+
+</div>
+
+<!-- ─── LEGEND ─── -->
+<div class="legend">
+  <div class="legend-item">
+    <div class="legend-bar" style="background: var(--accent-red)"></div>
+    Urgent + Important
+  </div>
+  <div class="legend-item">
+    <div class="legend-bar" style="background: var(--accent-amber)"></div>
+    Important (not urgent)
+  </div>
+  <div class="legend-item">
+    <div class="legend-bar" style="background: var(--accent-blue)"></div>
+    Urgent (not important)
+  </div>
+  <div class="legend-item">
+    <div class="legend-bar" style="background: var(--text-muted)"></div>
+    Low priority
+  </div>
+  <div class="legend-item" style="margin-left: auto;">
+    <span style="color: var(--accent-blue)">■</span> Jake
+    <span style="color: var(--accent-cyan); margin-left: 8px;">■</span> Mimir
+    <span style="color: var(--accent-purple); margin-left: 8px;">■</span> Josh
+    <span style="color: var(--accent-amber); margin-left: 8px;">■</span> Ammar
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════════
+// TSL COMMAND CENTER — TASK DATA
+// Mimir updates this file by modifying the TASKS array below
+// ══════════════════════════════════════════════════════════════
+
+const TASKS = [
+  // ── BACKLOG ──
+  {
+    id: "TSL-020",
+    title: "CoWork desktop automation setup",
+    status: "backlog",
+    priority: "low",
+    owner: "jake",
+    category: "Mimir",
+    due: null,
+    blocker: null
+  },
+  {
+    id: "TSL-021",
+    title: "Apollo + Hunter + Instantly cold outreach infrastructure",
+    status: "backlog",
+    priority: "important",
+    owner: "jake",
+    category: "Growth",
+    due: null,
+    blocker: null
+  },
+  {
+    id: "TSL-022",
+    title: "GHL AI conversation agent for C-Suite pipeline",
+    status: "backlog",
+    priority: "important",
+    owner: "jake",
+    category: "Growth",
+    due: null,
+    blocker: null
+  },
+
+  // ── QUEUED ──
+  {
+    id: "TSL-015",
+    title: "Content repurposing engine — 1 video → 10 assets",
+    status: "queued",
+    priority: "important",
+    owner: "mimir",
+    category: "Content",
+    due: "2026-03-10",
+    blocker: null
+  },
+  {
+    id: "TSL-016",
+    title: "Weekly CRO loop — Champion Circle + Sales Arena funnels",
+    status: "queued",
+    priority: "important",
+    owner: "mimir",
+    category: "Growth",
+    due: "2026-03-10",
+    blocker: null
+  },
+  {
+    id: "TSL-017",
+    title: "Lead scoring system in HubSpot",
+    status: "queued",
+    priority: "urgent",
+    owner: "mimir",
+    category: "Sales Ops",
+    due: "2026-03-12",
+    blocker: null
+  },
+
+  // ── IN PROGRESS ──
+  {
+    id: "TSL-001",
+    title: "Sales Director interviews — Ryan (today), Sal (tomorrow 2PM)",
+    status: "progress",
+    priority: "urgent-important",
+    owner: "jake",
+    category: "Hiring",
+    due: "2026-03-05",
+    blocker: null
+  },
+  {
+    id: "TSL-003",
+    title: "C-Suite outreach playbook execution",
+    status: "progress",
+    priority: "urgent-important",
+    owner: "jake",
+    category: "C-Suite",
+    due: "2026-03-07",
+    blocker: null
+  },
+  {
+    id: "TSL-004",
+    title: "Traffic Light System training video",
+    status: "progress",
+    priority: "important",
+    owner: "jake",
+    category: "C-Suite",
+    due: "2026-03-07",
+    blocker: null
+  },
+  {
+    id: "TSL-005",
+    title: "Playbook finalizations — master doc + sales manager + onboarding + recruiting",
+    status: "progress",
+    priority: "important",
+    owner: "jake",
+    category: "C-Suite",
+    due: "2026-03-07",
+    blocker: null
+  },
+
+  // ── BLOCKED ──
+  {
+    id: "TSL-006",
+    title: "Estimate Mastery AI scoring setup",
+    status: "blocked",
+    priority: "important",
+    owner: "mimir",
+    category: "Client",
+    due: "2026-03-10",
+    blocker: "Waiting on SOP from Josh"
+  },
+  {
+    id: "TSL-007",
+    title: "Market research ads — next event launch",
+    status: "blocked",
+    priority: "urgent-important",
+    owner: "jake",
+    category: "Marketing",
+    due: "2026-03-06",
+    blocker: "Need launch plan/assets"
+  },
+
+  // ── REVIEW ──
+  {
+    id: "TSL-010",
+    title: "Sales Director rejection email template",
+    status: "review",
+    priority: "urgent",
+    owner: "jake",
+    category: "Hiring",
+    due: "2026-03-05",
+    blocker: null
+  },
+  {
+    id: "TSL-011",
+    title: "JT callback + follow-up",
+    status: "review",
+    priority: "urgent",
+    owner: "jake",
+    category: "Hiring",
+    due: "2026-03-05",
+    blocker: null
+  },
+
+  // ── DONE ──
+  {
+    id: "TSL-030",
+    title: "Mimir crash recovery — sessions + delivery queue cleared",
+    status: "done",
+    priority: "urgent-important",
+    owner: "jake",
+    category: "Mimir",
+    due: null,
+    blocker: null
+  },
+  {
+    id: "TSL-031",
+    title: "OpenClaw updated to 2026.3.2",
+    status: "done",
+    priority: "urgent",
+    owner: "jake",
+    category: "Mimir",
+    due: null,
+    blocker: null
+  },
+  {
+    id: "TSL-032",
+    title: "Ollama fallback configured + tested",
+    status: "done",
+    priority: "important",
+    owner: "jake",
+    category: "Mimir",
+    due: null,
+    blocker: null
+  },
+  {
+    id: "TSL-033",
+    title: "API key rotated after exposure",
+    status: "done",
+    priority: "urgent-important",
+    owner: "jake",
+    category: "Security",
+    due: null,
+    blocker: null
+  },
+  {
+    id: "TSL-034",
+    title: "Ganzak playbook analysis complete",
+    status: "done",
+    priority: "important",
+    owner: "mimir",
+    category: "Strategy",
+    due: null,
+    blocker: null
+  },
+  {
+    id: "TSL-035",
+    title: "6 Mimir skills built (Phase 3)",
+    status: "done",
+    priority: "important",
+    owner: "mimir",
+    category: "Mimir",
+    due: null,
+    blocker: null
+  }
+];
+
+// ══════════════════════════════════════════════════════════════
+// RENDER ENGINE
+// ══════════════════════════════════════════════════════════════
+
+let activeOwnerFilter = 'all';
+let activePriorityFilter = 'all';
+
+function createCard(task) {
+  const today = new Date().toISOString().split('T')[0];
+  let dueClass = '';
+  let dueText = '';
+  
+  if (task.due) {
+    if (task.due < today) {
+      dueClass = 'overdue';
+      const days = Math.floor((new Date(today) - new Date(task.due)) / 86400000);
+      dueText = `${days}d overdue`;
+    } else if (task.due === today) {
+      dueClass = 'today';
+      dueText = 'TODAY';
+    } else {
+      const days = Math.floor((new Date(task.due) - new Date(today)) / 86400000);
+      dueText = days <= 7 ? `${days}d left` : task.due.slice(5);
+    }
+  }
+
+  const ownerClass = task.owner === 'mimir' ? 'mimir' : 
+                     task.owner === 'josh' ? 'josh' : 
+                     task.owner === 'ammar' ? 'ammar' : '';
+
+  return `
+    <div class="card" data-owner="${task.owner}" data-priority="${task.priority}">
+      <div class="card-priority ${task.priority}"></div>
+      <div class="card-top">
+        <div class="card-title">${task.title}</div>
+        <div class="card-id">${task.id}</div>
+      </div>
+      ${task.blocker ? `<div class="card-blocker">${task.blocker}</div>` : ''}
+      <div class="card-meta">
+        <div class="card-tags">
+          <span class="tag tag-owner ${ownerClass}">${task.owner}</span>
+          <span class="tag tag-category">${task.category}</span>
+        </div>
+        ${dueText ? `<div class="card-due ${dueClass}">${dueText}</div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function render() {
+  const columns = {
+    backlog: [], queued: [], progress: [], 
+    blocked: [], review: [], done: []
+  };
+
+  const filtered = TASKS.filter(t => {
+    if (activeOwnerFilter !== 'all' && t.owner !== activeOwnerFilter) return false;
+    if (activePriorityFilter !== 'all' && t.priority !== activePriorityFilter) return false;
+    return true;
+  });
+
+  filtered.forEach(t => {
+    if (columns[t.status]) columns[t.status].push(t);
+  });
+
+  // Sort: urgent-important first, then important, then urgent, then low
+  const priorityOrder = { 'urgent-important': 0, 'important': 1, 'urgent': 2, 'low': 3 };
+  Object.keys(columns).forEach(col => {
+    columns[col].sort((a, b) => (priorityOrder[a.priority] || 3) - (priorityOrder[b.priority] || 3));
+  });
+
+  document.getElementById('colBacklog').innerHTML = columns.backlog.map(createCard).join('');
+  document.getElementById('colQueued').innerHTML = columns.queued.map(createCard).join('');
+  document.getElementById('colProgress').innerHTML = columns.progress.map(createCard).join('');
+  document.getElementById('colBlocked').innerHTML = columns.blocked.map(createCard).join('');
+  document.getElementById('colReview').innerHTML = columns.review.map(createCard).join('');
+  document.getElementById('colDone').innerHTML = columns.done.map(createCard).join('');
+
+  document.getElementById('countBacklog').textContent = columns.backlog.length;
+  document.getElementById('countQueued').textContent = columns.queued.length;
+  document.getElementById('countProgress').textContent = columns.progress.length;
+  document.getElementById('countBlocked').textContent = columns.blocked.length;
+  document.getElementById('countReview').textContent = columns.review.length;
+  document.getElementById('countDone').textContent = columns.done.length;
+
+  // Update metrics
+  const active = TASKS.filter(t => t.status !== 'done');
+  document.getElementById('metricUrgent').textContent = active.filter(t => t.priority === 'urgent-important').length;
+  document.getElementById('metricProgress').textContent = TASKS.filter(t => t.status === 'progress').length;
+  document.getElementById('metricBlocked').textContent = TASKS.filter(t => t.status === 'blocked').length;
+  document.getElementById('metricDone').textContent = TASKS.filter(t => t.status === 'done').length;
+  document.getElementById('metricTotal').textContent = active.length;
+
+  // Update timestamp
+  const now = new Date();
+  document.getElementById('lastUpdated').textContent = 
+    `Updated: ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+}
+
+function filterOwner(owner, btn) {
+  activeOwnerFilter = owner;
+  document.querySelectorAll('.filter-bar .filter-btn').forEach(b => {
+    if (b.onclick && b.onclick.toString().includes('filterOwner')) {
+      b.classList.remove('active');
+    }
+  });
+  btn.classList.add('active');
+  render();
+}
+
+function filterPriority(priority, btn) {
+  activePriorityFilter = priority;
+  document.querySelectorAll('.filter-bar .filter-btn').forEach(b => {
+    if (b.onclick && b.onclick.toString().includes('filterPriority')) {
+      b.classList.remove('active');
+    }
+  });
+  btn.classList.add('active');
+  render();
+}
+
+// Initial render
+render();
+</script>
+
+</body>
+</html>
