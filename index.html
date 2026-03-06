@@ -1206,7 +1206,10 @@ const TASKS = [
       { text: "Review + approve with Jake", done: false }
     ],
     docs: [],
-    notes: "3-EMAIL SEQUENCE FOR REVIEW | EMAIL 1 - SUBJECT: Are you leaving $25K/month on the table? | Hey [First Name], Quick one. When we audit roofing contractors, we find on average they're leaving at least $4,000 per deal in uncollected revenue. Most are running 5-10 jobs a month. That's $20,000-$40,000 sitting on the table every single month. We had a contractor come in recently who thought his numbers were solid. Turns out he was leaving over $35K/month behind. We fixed it. He's not anymore. If you want to know where you're leaking money, I'd love to do a free 20-minute audit call. No pitch. Just numbers. Reply 'audit' and I'll get you on the calendar. - Jake Grant || EMAIL 2 - SUBJECT: What we found when we audited his business | Hey [First Name], Wanted to share something quick. A roofing contractor came to us a few months back - solid business, good close rate, thought everything was running fine. We ran him through our audit. Found $38,000/month in revenue he was walking away from on jobs he'd already closed. Tightened up three things. Revenue went up without running a single extra job or spending another dollar on marketing. That's the whole idea behind what we do. Curious if there's money like that sitting in yours? Free 20-minute audit. Worth a look? - Jake Grant || EMAIL 3 - SUBJECT: Last one from me | Hey [First Name], I've reached out a couple times - keeping this short. We work with roofing contractors who are already running a solid business but leaving money on the table without knowing it. We find it, we fix it. Free 20-minute audit if you want it. If the timing's off, totally get it. Good luck out there. - Jake Grant, The Sales League | Reply 'approved' or send edits. Once approved I'll load into HubSpot + build the Loom walkthrough."
+    deliverables: [
+      { label: "3-Email Re-engagement Sequence", type: "copy", content: "EMAIL 1\nSubject: Are you leaving $25K/month on the table?\n\nHey [First Name],\n\nQuick one.\n\nWhen we audit roofing contractors, we find on average they're leaving at least $4,000 per deal in uncollected revenue. Most are running 5\u201310 jobs a month.\n\nThat's $20,000\u2013$40,000 sitting on the table every single month.\n\nWe had a contractor come in recently who thought his numbers were solid. Turns out he was leaving over $35K/month behind. We fixed it. He's not anymore.\n\nIf you want to know where you're leaking money, I'd love to do a free 20-minute audit call. No pitch. Just numbers.\n\nReply \"audit\" and I'll get you on the calendar.\n\n\u2014 Jake Grant, The Sales League\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nEMAIL 2\nSubject: What we found when we audited his business\n\nHey [First Name],\n\nWanted to share something quick.\n\nA roofing contractor came to us a few months back \u2014 solid business, good close rate, thought everything was running fine.\n\nWe ran him through our audit. Found $38,000/month in revenue he was walking away from on jobs he'd already closed. Tightened up three things. Revenue went up without running a single extra job or spending another dollar on marketing.\n\nThat's the whole idea behind what we do.\n\nCurious if there's money like that sitting in yours? Free 20-minute audit. Worth a look?\n\n\u2014 Jake Grant, The Sales League\n\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n\nEMAIL 3\nSubject: Last one from me\n\nHey [First Name],\n\nI've reached out a couple times \u2014 keeping this short.\n\nWe work with roofing contractors who are already running a solid business but leaving money on the table without knowing it. We find it, we fix it.\n\nFree 20-minute audit if you want it. If the timing's off, totally get it.\n\nGood luck out there.\n\n\u2014 Jake Grant, The Sales League", created: "2026-03-05" }
+    ],
+    notes: "Source: Josh Alltop Level 10, Mar 5. Load into HubSpot once approved. Then build Loom walkthrough for Alena."
   },
   {
     id: "TSL-026",
@@ -1305,7 +1308,10 @@ const TASKS = [
       { text: "Send to ~30 declined applicants via HubSpot", done: false }
     ],
     docs: [],
-    notes: "COPY FOR REVIEW | SUBJECT: Your Application with The Sales League | Hey [First Name], Thank you for taking the time to go through our process - I genuinely appreciated the conversation and getting to know you. After careful consideration, we've decided to move forward with another candidate whose background is a closer fit for where we are right now. This isn't a reflection of your ability - you clearly have a lot to offer. We just had to make a tough call. I'd love to stay connected. The Sales League is growing fast and the right opportunities have a way of showing up at the right time. Wishing you nothing but success. - Jake Grant, The Sales League | Reply 'approved' or send edits. Once approved I'll set up the HubSpot blast to ~30 declined candidates."
+    deliverables: [
+      { label: "Rejection Email Template", type: "template", content: "Subject: Your Application with The Sales League\n\nHey [First Name],\n\nThank you for taking the time to go through our process \u2014 I genuinely appreciated the conversation and getting to know you.\n\nAfter careful consideration, we've decided to move forward with another candidate whose background is a closer fit for where we are right now.\n\nThis isn't a reflection of your ability \u2014 you clearly have a lot to offer. We just had to make a tough call.\n\nI'd love to stay connected. The Sales League is growing fast and the right opportunities have a way of showing up at the right time.\n\nWishing you nothing but success.\n\n\u2014 Jake Grant\nThe Sales League", created: "2026-03-05" }
+    ],
+    notes: "Warm, professional, leaves door open. Review copy in Deliverables above. Reply approved or send edits — I'll set up the HubSpot blast to ~30 declined candidates."
   },
   {
     id: "TSL-011",
@@ -1775,6 +1781,9 @@ function openPanel(taskId) {
       </div>`;
   }
 
+  // Deliverables
+  bodyHTML += renderDeliverables(task);
+
   // Notes
   if (task.notes) {
     bodyHTML += `
@@ -1862,7 +1871,100 @@ function filterPriority(priority, btn) {
 
 // Initial render
 render();
+
+  // ── Deliverables ──
+  let _dlvTask = null;
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function renderDeliverables(task) {
+    if (!task.deliverables || task.deliverables.length === 0) return '';
+    _dlvTask = task;
+    let html = `<div class="panel-section"><div class="panel-section-title">Deliverables</div><div class="deliverables-section">`;
+    task.deliverables.forEach((d, i) => {
+      if (d.type === 'link') {
+        html += `<div class="deliverable-card">
+          <div class="deliverable-card-header" onclick="toggleDlv(this)">
+            <div class="deliverable-label"><span>🔗</span><span>${escHtml(d.label)}</span><span class="deliverable-type-badge">link</span></div>
+            <span class="deliverable-arrow">▼</span>
+          </div>
+          <div class="deliverable-body">
+            <div class="deliverable-link-row"><a href="${d.url}" target="_blank">${d.url}</a></div>
+            <div class="deliverable-footer"><span class="deliverable-created">${d.created || ''}</span></div>
+          </div></div>`;
+      } else {
+        html += `<div class="deliverable-card">
+          <div class="deliverable-card-header" onclick="toggleDlv(this)">
+            <div class="deliverable-label"><span>${d.type === 'template' ? '📄' : '✍️'}</span><span>${escHtml(d.label)}</span><span class="deliverable-type-badge">${d.type}</span></div>
+            <div class="deliverable-card-actions" onclick="event.stopPropagation()">
+              <button class="btn-dlv btn-dlv-copy" onclick="copyDlv(${i},this)">Copy</button>
+              <button class="btn-dlv" onclick="openDlvFull(${i})">Full screen</button>
+            </div>
+            <span class="deliverable-arrow">▼</span>
+          </div>
+          <div class="deliverable-body">
+            <div class="deliverable-content-wrap"><div class="deliverable-content">${escHtml(d.content)}</div></div>
+            <div class="deliverable-footer"><span class="deliverable-created">${d.created || ''}</span></div>
+          </div></div>`;
+      }
+    });
+    html += '</div></div>';
+    return html;
+  }
+
+  function toggleDlv(header) {
+    const body = header.nextElementSibling;
+    body.classList.toggle('open');
+    header.classList.toggle('open');
+  }
+
+  function copyDlv(idx, btn) {
+    if (!_dlvTask || !_dlvTask.deliverables[idx]) return;
+    navigator.clipboard.writeText(_dlvTask.deliverables[idx].content).then(() => {
+      const orig = btn.textContent;
+      btn.textContent = '✓ Copied!';
+      btn.style.background = '#16a34a'; btn.style.color = '#fff'; btn.style.borderColor = '#16a34a';
+      setTimeout(() => { btn.textContent = orig; btn.style.background = ''; btn.style.color = ''; btn.style.borderColor = ''; }, 2000);
+    });
+  }
+
+  function openDlvFull(idx) {
+    if (!_dlvTask || !_dlvTask.deliverables[idx]) return;
+    const d = _dlvTask.deliverables[idx];
+    document.getElementById('dlvOverlayTitle').textContent = d.label;
+    document.getElementById('dlvOverlayContent').textContent = d.content;
+    const copyBtn = document.getElementById('dlvOverlayCopy');
+    copyBtn.textContent = 'Copy to Clipboard';
+    copyBtn.onclick = () => {
+      navigator.clipboard.writeText(d.content).then(() => {
+        copyBtn.textContent = '✓ Copied!'; copyBtn.classList.add('copied');
+        setTimeout(() => { copyBtn.textContent = 'Copy to Clipboard'; copyBtn.classList.remove('copied'); }, 2500);
+      });
+    };
+    document.getElementById('dlvOverlay').classList.add('open');
+  }
+
+  function closeDlvOverlay() {
+    document.getElementById('dlvOverlay').classList.remove('open');
+  }
 </script>
 
+
+  <!-- Deliverable Fullscreen Overlay -->
+  <div class="dlv-overlay" id="dlvOverlay" onclick="if(event.target===this)closeDlvOverlay()">
+    <div class="dlv-overlay-inner">
+      <div class="dlv-overlay-header">
+        <div class="dlv-overlay-title" id="dlvOverlayTitle"></div>
+        <button class="dlv-overlay-close" onclick="closeDlvOverlay()">✕</button>
+      </div>
+      <div class="dlv-overlay-content" id="dlvOverlayContent"></div>
+      <div class="dlv-overlay-footer">
+        <button class="btn-dlv-copy-full" id="dlvOverlayCopy">Copy to Clipboard</button>
+        <button class="btn-dlv" onclick="closeDlvOverlay()" style="padding:10px 16px">Close</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
