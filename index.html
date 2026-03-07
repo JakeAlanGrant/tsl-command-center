@@ -1452,14 +1452,14 @@ const TASKS = [
   // ── IN PROGRESS ──
   {
     id: "TSL-001",
-    title: "Sales Director interviews — Sal Leone today 2PM, finalize Greg/Evan/Joseph",
-    status: "progress",
+    title: "Sales Director decision — Jake stepping into role (no external hire)",
+    status: "done",
     priority: "urgent-important",
     owner: "jake",
     category: "Hiring",
     due: "2026-03-05",
     blocker: null,
-    description: "Final stretch of Sales Director hiring. 6-step process: Application → PI → Homework 1 → First interview → Homework 2 (call reviews) → Final interview. Target profile: Mechanic + architect — diagnose problems AND build systems. Captain/Persuader PI type with B > +0.8σ.",
+    description: "Decision made: NOT hiring an external Sales Director. Jake Grant stepping into the Sales Director role himself. Final interviews with Greg Minor, Evan Sforzo, Joseph Anderson were completed but position not filled. Jake takes ownership of all C-Suite client team management.",
     subtasks: [
       { text: "Sal Leone interview — 2 PM today", done: false },
       { text: "Final interview: Greg Minor", done: false },
@@ -2124,6 +2124,98 @@ const TASKS = [
       { label: "Scaling as a Science (program)", type: "link", url: "https://scaling.com" }
     ],
     notes: "PBD Summit link is a placeholder — Jake to provide location of recordings + playbook. Priority read order: Sales Management Simplified → Coaching Salespeople → Sales Acceleration Formula → Extreme Ownership → The Score Takes Care of Itself."
+  }
+  ,
+  {
+    id: "JAG-051",
+    title: "Slack client knowledge base — all 3 batches complete",
+    status: "done",
+    priority: "important",
+    owner: "mimir",
+    category: "Ops",
+    due: null,
+    blocker: null,
+    description: "Read all 18 client Slack channels (mgmt, sales teams, sales activity) from March 1-7, 2026. Fixed wrong timestamp bug (2025 vs 2026). Saved to knowledge/clients/batch1-mgmt.md, batch2-sales-teams.md, batch3-sales-activity.md. $180K in deals mapped across 6 clients.",
+    subtasks: [],
+    deliverables: [],
+    notes: "Completed Mar 7, 2026 ~2:06 AM CST"
+  }
+  ,
+  {
+    id: "JAG-052",
+    title: "Connect Gmail — hiring@, jake@, team@thesalesleague.com",
+    status: "done",
+    priority: "important",
+    owner: "mimir",
+    category: "Ops",
+    due: null,
+    blocker: null,
+    description: "All 3 TSL Gmail accounts authorized via gog auth login. Can now read and send from hiring@, jake@, and team@thesalesleague.com.",
+    subtasks: [],
+    deliverables: [],
+    notes: "Completed Mar 7, 2026"
+  }
+  ,
+  {
+    id: "JAG-053",
+    title: "Connect Slack — mimir_ai bot live in TSL workspace",
+    status: "done",
+    priority: "important",
+    owner: "mimir",
+    category: "Ops",
+    due: null,
+    blocker: null,
+    description: "Slack bot token authenticated. @mimir_ai live in The Sales League workspace. DM policy set to allowlist (Jake only). Group policy set to open — responds when mentioned in channels. Socket mode enabled.",
+    subtasks: [],
+    deliverables: [],
+    notes: "Completed Mar 7, 2026"
+  }
+  ,
+  {
+    id: "JAG-054",
+    title: "TSL Strategy Brief — compile David calls + email into PDF",
+    status: "done",
+    priority: "important",
+    owner: "mimir",
+    category: "Strategy",
+    due: null,
+    blocker: null,
+    description: "Compiled both David Smailes strategy calls (Krisp transcripts) + David email into a PDF brief. Sections: Summary, Action Items table, 30-60-90 Day Game Plan. Delivered to Jake via Telegram and posted to #executive-chat Slack.",
+    subtasks: [],
+    deliverables: [
+      { label: "TSL Strategy Brief PDF", type: "link", url: "https://drive.google.com" }
+    ],
+    notes: "Completed Mar 7, 2026. File: TSL_Strategy_Brief_March6.pdf"
+  }
+  ,
+  {
+    id: "JAG-055",
+    title: "Command Center deep links + JAG prefix migration",
+    status: "done",
+    priority: "important",
+    owner: "mimir",
+    category: "Ops",
+    due: null,
+    blocker: null,
+    description: "Fixed hash routing on JAG Command Center so deep links (e.g. #JAG-049) open the task panel correctly. Migrated task prefix from TSL- to JAG- going forward. Updated MEMORY.md with new next task ID.",
+    subtasks: [],
+    deliverables: [],
+    notes: "Completed Mar 7, 2026 ~3:56 AM CST"
+  }
+  ,
+  {
+    id: "JAG-056",
+    title: "Product documentation structure — TSL AI Sales Platform",
+    status: "done",
+    priority: "important",
+    owner: "mimir",
+    category: "Strategy",
+    due: null,
+    blocker: null,
+    description: "Built product/ documentation folder structure in workspace. Seeded with OOTFD, FAINT, and Traffic Light framework docs. Foundation for AI Sales Manager product methodology layer.",
+    subtasks: [],
+    deliverables: [],
+    notes: "Completed Mar 7, 2026. Path: workspace/product/"
   }
 ];
 
