@@ -2317,13 +2317,13 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closePanel();
 });
 
-// Hash routing on load
-window.addEventListener('load', () => {
+// Hash routing — runs after render() so panel DOM exists
+function checkHashRoute() {
   const hash = window.location.hash.slice(1);
   if (hash && TASKS.find(t => t.id === hash)) {
     openPanel(hash);
   }
-});
+}
 
 // ══════════════════════════════════════════════════════════════
 // FILTERS
@@ -2338,6 +2338,7 @@ function filterOwner(owner, btn) {
   });
   btn.classList.add('active');
   render();
+  checkHashRoute();
 }
 
 function filterPriority(priority, btn) {
@@ -2349,6 +2350,7 @@ function filterPriority(priority, btn) {
   });
   btn.classList.add('active');
   render();
+  checkHashRoute();
 }
 
 
@@ -2362,6 +2364,7 @@ function filterPriority(priority, btn) {
       document.getElementById('pwGate').style.display = 'none';
       document.getElementById('boardWrap').classList.add('unlocked');
       render();
+  checkHashRoute();
     } else {
       errEl.textContent = 'Incorrect password. Try again.';
       const inp = document.getElementById('pwInput');
@@ -2381,6 +2384,7 @@ function filterPriority(priority, btn) {
     document.getElementById('pwGate').style.display = 'none';
     document.getElementById('boardWrap').classList.add('unlocked');
     render();
+  checkHashRoute();
   }
 
   // Initial render — only called after auth
