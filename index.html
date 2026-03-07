@@ -2217,6 +2217,67 @@ const TASKS = [
     deliverables: [],
     notes: "Completed Mar 7, 2026. Path: workspace/product/"
   }
+  ,
+  {
+    id: "JAG-057",
+    title: "RADAR: C-Suite Client Onboarding Automation",
+    status: "queued",
+    priority: "low",
+    owner: "mimir",
+    category: "Ops",
+    due: null,
+    blocker: null,
+    description: "When Jake says 'onboard new client [name]' — auto-create Google Drive folder, send welcome email, schedule kickoff call, add 3-day follow-up reminder. TSL already has a dialed-in onboarding process — this is an enhancement to automate the admin layer.",
+    subtasks: [
+      { text: "Document current onboarding steps with Jake", done: false },
+      { text: "Map each step to an automation (Drive, Gmail, Calendar)", done: false },
+      { text: "Build trigger workflow: 'onboard [client name]' command", done: false },
+      { text: "Test with one new client before rolling out", done: false }
+    ],
+    deliverables: [],
+    notes: "Radar item — not urgent. Current process works fine. Add when there is bandwidth."
+  }
+  ,
+  {
+    id: "JAG-058",
+    title: "ICP Research Agent — Weekly Pain Point Mining",
+    status: "queued",
+    priority: "important",
+    owner: "mimir",
+    category: "Strategy",
+    due: "2026-03-14",
+    blocker: "Waiting on Grok credits for native X/Twitter access — will use Brave Search in the interim",
+    description: "Weekly automated research sweep: mine Reddit (r/sales, r/salesmanagement, r/entrepreneur, r/smallbusiness) for recurring pain points around managing sales teams, hiring reps, hitting revenue targets. Output: top 5 pain points with frequency scores, saved to knowledge base. Feeds TSL marketing copy + AI Sales Manager product research.",
+    subtasks: [
+      { text: "Set up Brave Search queries for target subreddits + keywords", done: false },
+      { text: "Build weekly cron (Sundays) to run research sweep", done: false },
+      { text: "Save findings to knowledge/icp-research/YYYY-MM-DD.md", done: false },
+      { text: "Upgrade to Grok for native X/Twitter data once credits loaded", done: false }
+    ],
+    deliverables: [],
+    notes: "Brave Search handles Reddit/web. Grok upgrade unlocks real-time X data. Start with Brave Search version this week."
+  }
+  ,
+  {
+    id: "JAG-059",
+    title: "Social Media Content — LinkedIn + X from Call Coaching Moments",
+    status: "queued",
+    priority: "important",
+    owner: "jake",
+    category: "Marketing",
+    due: "2026-03-14",
+    blocker: null,
+    description: "When Jake shares a coaching moment, call clip, or insight from the week — Mimir turns it into a LinkedIn post + X thread. Channels: LinkedIn (professional, 150-200 words) + X (punchy hook, 280 chars or thread). Jake approves before posting. Goal: build Jake's personal brand as a sales leader while documenting TSL methodology.",
+    subtasks: [
+      { text: "Connect LinkedIn API or identify posting method", done: false },
+      { text: "Connect X/Twitter API", done: false },
+      { text: "Define content format: coaching moment → LinkedIn post + X thread", done: false },
+      { text: "Build approval flow (Jake reviews draft before posting)", done: false },
+      { text: "Test with one coaching moment from the week", done: false }
+    ],
+    deliverables: [],
+    notes: "Source material: Krisp call recordings, coaching messages in Slack, key decisions Jake makes as Sales Director. This also feeds the AI Sales Manager product documentation."
+  }
 ];
 
 // ══════════════════════════════════════════════════════════════
