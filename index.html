@@ -860,6 +860,26 @@ body {
 .panel-badge.due-badge.today   { background: rgba(245,158,11,0.1);  color: var(--accent-amber); }
 
 .panel-body { flex: 1; overflow-y: auto; padding: 0; }
+
+.panel-meta-editor {
+  padding: 0 22px 12px;
+}
+.meta-edit-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.meta-edit-input {
+  flex: 1;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 7px 9px;
+  font-size: 12px;
+}
+.panel-badge.editable { cursor: pointer; }
+.panel-badge.editable:hover { border-color: var(--accent-blue); }
 .panel-body::-webkit-scrollbar { width: 4px; }
 .panel-body::-webkit-scrollbar-track { background: transparent; }
 .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
@@ -1475,6 +1495,7 @@ body {
     </div>
   </div>
   <div class="panel-meta" id="panelMeta"></div>
+  <div class="panel-meta-editor" id="panelMetaEditor"></div>
   <div class="panel-body" id="panelBody"></div>
 </div>
 
@@ -2774,67 +2795,16 @@ function openPanel(taskId) {
   const priorityClasses = { 'urgent-important': '', 'important': 'important', 'urgent': 'urgent', 'low': 'low' };
 
   document.getElementById('panelMeta').innerHTML = `
-    <span class="panel-badge status-${effectiveStatus}">${effectiveStatus.toUpperCase()}</span>
-    <span class="panel-badge priority-ui ${priorityClasses[effectivePriority]}">${priorityLabels[effectivePriority] || effectivePriority}</span>
-    <span class="panel-badge owner-${effectiveOwner}">👤 ${getOwnerLabel(effectiveOwner)}</span>
-    ${dueBadge}
+    <span class="panel-badge editable status-${effectiveStatus}" onclick="openMetaEditor('status')">${effectiveStatus.toUpperCase()}</span>
+    <span class="panel-badge editable priority-ui ${priorityClasses[effectivePriority]}" onclick="openMetaEditor('priority')">${priorityLabels[effectivePriority] || effectivePriority}</span>
+    <span class="panel-badge editable owner-${effectiveOwner}" onclick="openMetaEditor('owner')">👤 ${getOwnerLabel(effectiveOwner)}</span>
+    ${effectiveDue ? `<span class="panel-badge editable due-badge" onclick="openMetaEditor('due')">📅 ${effectiveDue}</span>` : `<span class="panel-badge editable due-badge" onclick="openMetaEditor('due')">📅 Set due date</span>`}
   `;
+  document.getElementById('panelMetaEditor').innerHTML = '';
+
 
   // Body
   let bodyHTML = '';
-
-  // Quick Edit
-  bodyHTML += `
-    <div class="panel-section">
-      <div class="panel-section-title">Quick Edit</div>
-      <div class="quick-edit-grid">
-        <label>Status
-          <select id="qeStatus" class="quick-edit-input">
-            <option value="backlog" ${effectiveStatus==='backlog'?'selected':''}>Backlog</option>
-            <option value="queued" ${effectiveStatus==='queued'?'selected':''}>Queued</option>
-            <option value="progress" ${effectiveStatus==='progress'?'selected':''}>In Progress</option>
-            <option value="blocked" ${effectiveStatus==='blocked'?'selected':''}>Blocked</option>
-            <option value="review" ${effectiveStatus==='review'?'selected':''}>Review</option>
-            <option value="done" ${effectiveStatus==='done'?'selected':''}>Done</option>
-          </select>
-        </label>
-        <label>Priority
-          <select id="qePriority" class="quick-edit-input">
-            <option value="urgent-important" ${effectivePriority==='urgent-important'?'selected':''}>Urgent + Important</option>
-            <option value="important" ${effectivePriority==='important'?'selected':''}>Important</option>
-            <option value="urgent" ${effectivePriority==='urgent'?'selected':''}>Urgent</option>
-            <option value="low" ${effectivePriority==='low'?'selected':''}>Low</option>
-          </select>
-        </label>
-        <label>Owner
-          <select id="qeOwner" class="quick-edit-input">
-            <option value="jake" ${effectiveOwner==='jake'?'selected':''}>Jake</option>
-            <option value="mimir" ${effectiveOwner==='mimir'?'selected':''}>Mimir</option>
-            <option value="josh" ${effectiveOwner==='josh'?'selected':''}>Josh</option>
-            <option value="ops-manager" ${effectiveOwner==='ops-manager'?'selected':''}>Ops Mgr</option>
-            <option value="sales-manager" ${effectiveOwner==='sales-manager'?'selected':''}>Sales Mgr</option>
-            <option value="recruiting-manager" ${effectiveOwner==='recruiting-manager'?'selected':''}>Recruiting Mgr</option>
-          </select>
-        </label>
-        <label>Due Date
-          <input id="qeDue" class="quick-edit-input" type="date" value="${effectiveDue || ''}" />
-        </label>
-      </div>
-      <div class="task-chat-actions" style="margin-top:12px;">
-        <button class="task-chat-btn primary" onclick="applyQuickEdit('${task.id}')">Save Changes</button>
-      </div>
-      <div class="task-chat-meta" style="margin-top:10px;">Live relay (V5)</div>
-      <div class="quick-edit-grid" style="margin-top:6px; grid-template-columns: 1fr auto;">
-        <input id="relayUrlInput" class="quick-edit-input" type="url" placeholder="Relay webhook URL" value="${getRelayUrl()}" />
-        <label style="display:flex;align-items:center;gap:8px;color:var(--text-secondary);font-size:11px;">
-          <input id="relayEnabledInput" type="checkbox" ${relayEnabled() ? 'checked' : ''} /> On
-        </label>
-      </div>
-      <div class="task-chat-actions" style="margin-top:8px;">
-        <button class="task-chat-btn" onclick="saveRelaySettings()">Save Relay</button>
-        <button class="task-chat-btn" onclick="testRelay('${task.id}')">Test Ping</button>
-      </div>
-    </div>`;
 
   // Description
   if (task.description) {
@@ -3046,17 +3016,66 @@ function markTaskChatAddressed(taskId) {
   openPanel(taskId);
 }
 
-function applyQuickEdit(taskId) {
-  const status = document.getElementById('qeStatus')?.value;
-  const priority = document.getElementById('qePriority')?.value;
-  const owner = document.getElementById('qeOwner')?.value;
-  const due = document.getElementById('qeDue')?.value || null;
+function openMetaEditor(field) {
+  if (!currentPanelTaskId) return;
+  const task = TASKS.find(t => t.id === currentPanelTaskId);
+  if (!task) return;
+  const status = getTaskStatus(task);
+  const priority = getTaskPriority(task);
+  const owner = getTaskOwner(task);
+  const due = getTaskDue(task) || '';
 
-  if (status) { statusOverrides[taskId] = status; saveStatusOverrides(); }
-  if (priority) { priorityOverrides[taskId] = priority; savePriorityOverrides(); }
-  if (owner) { ownerOverrides[taskId] = owner; saveOwnerOverrides(); }
-  dueOverrides[taskId] = due;
-  saveDueOverrides();
+  let inputHtml = '';
+  if (field === 'status') {
+    inputHtml = `<select id="metaEditValue" class="meta-edit-input">
+      <option value="backlog" ${status==='backlog'?'selected':''}>Backlog</option>
+      <option value="queued" ${status==='queued'?'selected':''}>Queued</option>
+      <option value="progress" ${status==='progress'?'selected':''}>In Progress</option>
+      <option value="blocked" ${status==='blocked'?'selected':''}>Blocked</option>
+      <option value="review" ${status==='review'?'selected':''}>Review</option>
+      <option value="done" ${status==='done'?'selected':''}>Done</option>
+    </select>`;
+  } else if (field === 'priority') {
+    inputHtml = `<select id="metaEditValue" class="meta-edit-input">
+      <option value="urgent-important" ${priority==='urgent-important'?'selected':''}>Urgent + Important</option>
+      <option value="important" ${priority==='important'?'selected':''}>Important</option>
+      <option value="urgent" ${priority==='urgent'?'selected':''}>Urgent</option>
+      <option value="low" ${priority==='low'?'selected':''}>Low</option>
+    </select>`;
+  } else if (field === 'owner') {
+    inputHtml = `<select id="metaEditValue" class="meta-edit-input">
+      <option value="jake" ${owner==='jake'?'selected':''}>Jake</option>
+      <option value="mimir" ${owner==='mimir'?'selected':''}>Mimir</option>
+      <option value="josh" ${owner==='josh'?'selected':''}>Josh</option>
+      <option value="ops-manager" ${owner==='ops-manager'?'selected':''}>Ops Mgr</option>
+      <option value="sales-manager" ${owner==='sales-manager'?'selected':''}>Sales Mgr</option>
+      <option value="recruiting-manager" ${owner==='recruiting-manager'?'selected':''}>Recruiting Mgr</option>
+    </select>`;
+  } else if (field === 'due') {
+    inputHtml = `<input id="metaEditValue" class="meta-edit-input" type="date" value="${due}" />`;
+  }
+
+  document.getElementById('panelMetaEditor').innerHTML = `<div class="meta-edit-wrap">${inputHtml}<button class="task-chat-btn primary" onclick="applyMetaEdit('${field}')">Save</button><button class="task-chat-btn" onclick="cancelMetaEditor()">Cancel</button></div>`;
+}
+
+function cancelMetaEditor() {
+  document.getElementById('panelMetaEditor').innerHTML = '';
+}
+
+function applyMetaEdit(field) {
+  if (!currentPanelTaskId) return;
+  const taskId = currentPanelTaskId;
+  const value = document.getElementById('metaEditValue')?.value;
+  const prevStatus = getTaskStatus(TASKS.find(t => t.id === taskId) || { status: 'queued' });
+
+  if (field === 'status') { statusOverrides[taskId] = value; saveStatusOverrides(); }
+  if (field === 'priority') { priorityOverrides[taskId] = value; savePriorityOverrides(); }
+  if (field === 'owner') { ownerOverrides[taskId] = value; saveOwnerOverrides(); }
+  if (field === 'due') { dueOverrides[taskId] = value || null; saveDueOverrides(); }
+
+  if (field === 'status' && value === 'done' && prevStatus !== 'done') {
+    queueDonePing(taskId);
+  }
 
   render();
   openPanel(taskId);
