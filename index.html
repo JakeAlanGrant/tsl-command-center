@@ -46,7 +46,8 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   height: 100vh;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -234,8 +235,8 @@ body {
 
 .column {
   flex: 1;
-  min-width: 285px;
-  max-width: 340px;
+  min-width: 300px;
+  max-width: 360px;
   height: 100%;
   min-height: 0;
   background: transparent;
@@ -1561,7 +1562,7 @@ const TASKS = [
   {
     id: "TSL-004",
     title: "Traffic Light System — film training video for Apolo + Ammar",
-    status: "progress",
+    status: "done",
     priority: "important",
     owner: "jake",
     category: "C-Suite",
@@ -1642,7 +1643,7 @@ const TASKS = [
   {
     id: "TSL-026",
     title: "Traffic Light System SOP (for Apolo + Ammar)",
-    status: "progress",
+    status: "done",
     priority: "important",
     owner: "mimir",
     category: "C-Suite",
@@ -1781,8 +1782,8 @@ const TASKS = [
 
   {
     id: "TSL-038",
-    title: "Review Vincent's sales calls (Sales Director candidate)",
-    status: "progress",
+    title: "Review Vincent's sales calls — complete; schedule group interview",
+    status: "done",
     priority: "urgent-important",
     owner: "jake",
     category: "Hiring",
@@ -1931,14 +1932,29 @@ const TASKS = [
   {
     id: "JAG-048",
     title: "VGS — top priority follow-up",
-    status: "queued",
+    status: "done",
     priority: "urgent-important",
     owner: "jake",
     category: "Client",
     due: "2026-03-06",
     blocker: null,
-    description: "VGS top priority task — added by Jake March 6. Details TBD.",
+    description: "VGS top priority task — completed March 9.",
     subtasks: [],
+    deliverables: []
+  }  ,
+  {
+    id: "JAG-064",
+    title: "Vincent — schedule for next RWCPA group interview round",
+    status: "queued",
+    priority: "urgent-important",
+    owner: "jake",
+    category: "Hiring",
+    due: "2026-03-13",
+    blocker: null,
+    description: "Vincent (San Diego) call review complete. Not ready for director. Reach out and slot him into the next RWCPA group interview round rather than one-on-one with James.",
+    subtasks: [
+      { text: "Contact Vincent to schedule group interview", done: false }
+    ],
     deliverables: []
   },
   {
