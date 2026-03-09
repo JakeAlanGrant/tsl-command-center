@@ -2503,7 +2503,7 @@ function createCard(task) {
           <span class="tag tag-owner ${ownerClass}">${getOwnerLabel(task.owner)}</span>
           <span class="tag tag-category">${task.category}</span>
         </div>
-        ${dueText ? `<div class="card-due ${dueClass}">${dueText}</div>` : ''}
+        ${(dueText && task.status !== 'done') ? `<div class="card-due ${dueClass}">${dueText}</div>` : ''}
       </div>
     </div>
   `;
