@@ -1939,16 +1939,33 @@ const TASKS = [
   },
   {
     id: "JAG-048",
-    title: "VGS — top priority follow-up",
-    status: "done",
+    title: "VGS — Brendan offboarding packet + handoff assets",
+    status: "review",
     priority: "urgent-important",
     owner: "jake",
     category: "Client",
-    due: "2026-03-06",
+    due: "2026-03-10",
     blocker: null,
-    description: "VGS top priority task — completed March 9.",
-    subtasks: [],
-    deliverables: []
+    description: "Package and send all promised VGS offboarding materials from the Brendan call: candidate export, onboarding process docs, one-sheet, posting templates, and benchmark data.",
+    subtasks: [
+      { text: "Export and filter 800-applicant list for Brendan re-engagement", done: false },
+      { text: "Create VGS onboarding template (the missing Omar doc)", done: false },
+      { text: "Finalize TSL services one-sheet Brendan can use for referrals", done: false },
+      { text: "Compile Indeed/job posting + application workflow templates", done: false },
+      { text: "Document recruiting benchmarks (10% / 50% / ~25%) with caveat", done: false },
+      { text: "Confirm and hand off any remaining candidate files for final interviews", done: false },
+      { text: "Send final packet to Brendan and log completion", done: false }
+    ],
+    docs: [
+      { label: "VGS Offboarding Source Notes (local)", url: "https://github.com/JakeAlanGrant/tsl-command-center" },
+      { label: "Brendan Call Context (Mar 6 memory)", url: "https://github.com/JakeAlanGrant/tsl-command-center" }
+    ],
+    deliverables: [
+      { label: "VGS Packet Cover Email (Draft)", type: "copy", created: "2026-03-09", content: "Subject: VGS offboarding packet + recruiting handoff\n\nBrendan,\n\nAppreciate the partnership. Attached is the full VGS recruiting handoff packet with everything we discussed on our call:\n\n1) filtered candidate export from the 800 applicant pool\n2) onboarding/ramp template\n3) TSL services one-sheet (for referrals)\n4) job posting + application workflow templates\n5) benchmark/conversion reference sheet\n\nIf helpful, we can also do a 20-minute walkthrough so your team can implement this exactly as intended.\n\n– Jake" },
+      { label: "TSL Services One-Sheet for Brendan Referrals (Draft)", type: "copy", created: "2026-03-09", content: "TSL // Fractional Sales Management One-Sheet\n\nWho we help:\n- Founder-led companies with consistent revenue and existing lead flow\n- Teams with 1-2+ reps where owner is still too involved in day-to-day sales\n\nBest fit profile:\n- ~60+ appointments/month\n- ~$150K–$200K+/month with stable lead flow\n- Phone sales team (not field-only)\n\nWhat we install:\n- Sales management operating system\n- Rep accountability + performance coaching cadence\n- Pipeline/process discipline\n- Recruiting and onboarding systems for sales team growth\n\nOutcome target:\n- Predictable booked calls, improved show/close rates, cleaner forecasting, and owner time returned to strategic work." },
+      { label: "VGS Recruiting Benchmarks + Process Snapshot (Draft)", type: "copy", created: "2026-03-09", content: "Recruiting conversion benchmarks (historical reference)\n- Application → First interview booked: ~10%\n- First interview → Group role-play: ~50%\n- Group role-play → Final/client interview: ~25% (approx; validate against latest data)\n\nCore process flow used:\n1) Indeed sponsored posting\n2) HubSpot application form\n3) Predictive Index routing by role\n4) First interview screening\n5) Group role-play (Bull in the Ring)\n6) Final/client interview\n\nInterview quality indicators:\n- Problem-solving under pressure\n- Objection handling fluency\n- Ability to ask qualifying questions\n- Coachability and communication style" }
+    ],
+    notes: "Primary source docs: video-growth-systems-offboarding.md + memory (Feb 26, Mar 6). Brendan specifically requested onboarding template + candidate export + templates + benchmarks + referral one-sheet."
   }  ,
   {
     id: "JAG-064",
