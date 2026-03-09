@@ -234,8 +234,8 @@ body {
 }
 
 .column {
-  flex: 0 0 300px;
-  width: 300px;
+  flex: 0 0 340px;
+  width: 340px;
   height: 100%;
   min-height: 0;
   background: transparent;
@@ -344,6 +344,15 @@ body {
 }
 
 .card:active { transform: translateY(0); }
+
+.card.dragging {
+  opacity: 0.45;
+  transform: scale(0.99);
+}
+
+.column-cards.drag-over {
+  background: rgba(91,141,248,0.06);
+}
 
 .card-priority {
   position: absolute;
@@ -1255,7 +1264,7 @@ body {
       </div>
       <div class="column-wip">Icebox — not yet scheduled</div>
     </div>
-    <div class="column-cards" id="colBacklog"></div>
+    <div class="column-cards" id="colBacklog" data-status="backlog" ondragover="onColumnDragOver(event)" ondragleave="onColumnDragLeave(event)" ondrop="onColumnDrop(event)"></div>
   </div>
 
   <!-- QUEUED -->
@@ -1267,7 +1276,7 @@ body {
       </div>
       <div class="column-wip">Ready to start — this week</div>
     </div>
-    <div class="column-cards" id="colQueued"></div>
+    <div class="column-cards" id="colQueued" data-status="queued" ondragover="onColumnDragOver(event)" ondragleave="onColumnDragLeave(event)" ondrop="onColumnDrop(event)"></div>
   </div>
 
   <!-- IN PROGRESS -->
@@ -1279,7 +1288,7 @@ body {
       </div>
       <div class="column-wip">WIP limit: 5</div>
     </div>
-    <div class="column-cards" id="colProgress"></div>
+    <div class="column-cards" id="colProgress" data-status="progress" ondragover="onColumnDragOver(event)" ondragleave="onColumnDragLeave(event)" ondrop="onColumnDrop(event)"></div>
   </div>
 
   <!-- BLOCKED -->
@@ -1291,7 +1300,7 @@ body {
       </div>
       <div class="column-wip">Needs action to unblock</div>
     </div>
-    <div class="column-cards" id="colBlocked"></div>
+    <div class="column-cards" id="colBlocked" data-status="blocked" ondragover="onColumnDragOver(event)" ondragleave="onColumnDragLeave(event)" ondrop="onColumnDrop(event)"></div>
   </div>
 
   <!-- REVIEW -->
@@ -1303,7 +1312,7 @@ body {
       </div>
       <div class="column-wip">Awaiting approval</div>
     </div>
-    <div class="column-cards" id="colReview"></div>
+    <div class="column-cards" id="colReview" data-status="review" ondragover="onColumnDragOver(event)" ondragleave="onColumnDragLeave(event)" ondrop="onColumnDrop(event)"></div>
   </div>
 
   <!-- DONE -->
@@ -1315,7 +1324,7 @@ body {
       </div>
       <div class="column-wip">Last 7 days</div>
     </div>
-    <div class="column-cards" id="colDone"></div>
+    <div class="column-cards" id="colDone" data-status="done" ondragover="onColumnDragOver(event)" ondragleave="onColumnDragLeave(event)" ondrop="onColumnDrop(event)"></div>
   </div>
 
 </div>
@@ -2385,6 +2394,32 @@ const TASKS = [
 let activeOwnerFilter = 'all';
 let activePriorityFilter = 'all';
 let activeStatusFilter = 'all';
+let currentPanelTaskId = null;
+let dragTaskId = null;
+
+const STATUS_OVERRIDES_KEY = 'jag_board_status_overrides_v1';
+let statusOverrides = {};
+try {
+  statusOverrides = JSON.parse(localStorage.getItem(STATUS_OVERRIDES_KEY) || '{}');
+} catch (_) {
+  statusOverrides = {};
+}
+
+function getTaskStatus(task) {
+  return statusOverrides[task.id] || task.status;
+}
+
+function saveStatusOverrides() {
+  localStorage.setItem(STATUS_OVERRIDES_KEY, JSON.stringify(statusOverrides));
+}
+
+function getTaskFromRoute() {
+  const params = new URLSearchParams(window.location.search);
+  const qp = params.get('task');
+  if (qp) return qp;
+  const hash = window.location.hash.slice(1);
+  return hash || null;
+}
 
 function filterByMetric(status, el) {
   if (activeStatusFilter === status && status !== 'all') {
@@ -2436,7 +2471,7 @@ function createCard(task) {
                      task.owner === 'recruiting-manager' ? 'recruiting-manager' : '';
 
   return `
-    <div class="card" data-owner="${task.owner}" data-priority="${task.priority}" onclick="openPanel('${task.id}')">
+    <div class="card" data-owner="${task.owner}" data-priority="${task.priority}" data-task-id="${task.id}" draggable="true" onclick="handleCardClick(event, '${task.id}')" ondragstart="onCardDragStart(event, '${task.id}')" ondragend="onCardDragEnd(event)">
       <div class="card-priority ${task.priority}"></div>
       <div class="card-top">
         <div class="card-title">${task.title}</div>
@@ -2454,6 +2489,52 @@ function createCard(task) {
   `;
 }
 
+
+function handleCardClick(event, taskId) {
+  if (event.defaultPrevented) return;
+  openPanel(taskId);
+}
+
+function onCardDragStart(event, taskId) {
+  dragTaskId = taskId;
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', taskId);
+  requestAnimationFrame(() => {
+    event.target.classList.add('dragging');
+  });
+}
+
+function onCardDragEnd(event) {
+  event.target.classList.remove('dragging');
+  document.querySelectorAll('.column-cards.drag-over').forEach(el => el.classList.remove('drag-over'));
+}
+
+function onColumnDragOver(event) {
+  event.preventDefault();
+  event.currentTarget.classList.add('drag-over');
+}
+
+function onColumnDragLeave(event) {
+  event.currentTarget.classList.remove('drag-over');
+}
+
+function onColumnDrop(event) {
+  event.preventDefault();
+  const col = event.currentTarget;
+  col.classList.remove('drag-over');
+  const newStatus = col.dataset.status;
+  const taskId = event.dataTransfer.getData('text/plain') || dragTaskId;
+  if (!taskId || !newStatus) return;
+
+  statusOverrides[taskId] = newStatus;
+  saveStatusOverrides();
+  render();
+
+  if (currentPanelTaskId === taskId) {
+    openPanel(taskId);
+  }
+}
+
 function render() {
   const columns = {
     backlog: [], queued: [], progress: [], 
@@ -2465,14 +2546,15 @@ function render() {
     if (activePriorityFilter !== 'all' && t.priority !== activePriorityFilter) return false;
     if (activeStatusFilter === 'urgent') {
       if (!t.priority || !t.priority.includes('urgent')) return false;
-    } else if (activeStatusFilter !== 'all' && t.status !== activeStatusFilter) {
+    } else if (activeStatusFilter !== 'all' && getTaskStatus(t) !== activeStatusFilter) {
       return false;
     }
     return true;
   });
 
   filtered.forEach(t => {
-    if (columns[t.status]) columns[t.status].push(t);
+    const status = getTaskStatus(t);
+    if (columns[status]) columns[status].push(t);
   });
 
   const priorityOrder = { 'urgent-important': 0, 'important': 1, 'urgent': 2, 'low': 3 };
@@ -2496,9 +2578,9 @@ function render() {
 
   const active = TASKS.filter(t => t.status !== 'done');
   document.getElementById('metricUrgent').textContent = active.filter(t => t.priority === 'urgent-important').length;
-  document.getElementById('metricProgress').textContent = TASKS.filter(t => t.status === 'progress').length;
-  document.getElementById('metricBlocked').textContent = TASKS.filter(t => t.status === 'blocked').length;
-  document.getElementById('metricDone').textContent = TASKS.filter(t => t.status === 'done').length;
+  document.getElementById('metricProgress').textContent = TASKS.filter(t => getTaskStatus(t) === 'progress').length;
+  document.getElementById('metricBlocked').textContent = TASKS.filter(t => getTaskStatus(t) === 'blocked').length;
+  document.getElementById('metricDone').textContent = TASKS.filter(t => getTaskStatus(t) === 'done').length;
   document.getElementById('metricTotal').textContent = active.length;
 
   const now = new Date();
@@ -2514,8 +2596,8 @@ function openPanel(taskId) {
   const task = TASKS.find(t => t.id === taskId);
   if (!task) return;
 
-  // Set hash
-  history.replaceState(null, '', '#' + taskId);
+  currentPanelTaskId = taskId;
+  history.replaceState(null, '', `${window.location.pathname}?task=${encodeURIComponent(taskId)}`);
 
   // Header
   document.getElementById('panelId').textContent = task.id + ' · ' + task.category;
@@ -2536,7 +2618,7 @@ function openPanel(taskId) {
   const priorityClasses = { 'urgent-important': '', 'important': 'important', 'urgent': 'urgent', 'low': 'low' };
 
   document.getElementById('panelMeta').innerHTML = `
-    <span class="panel-badge status-${task.status}">${task.status.toUpperCase()}</span>
+    <span class="panel-badge status-${getTaskStatus(task)}">${getTaskStatus(task).toUpperCase()}</span>
     <span class="panel-badge priority-ui ${priorityClasses[task.priority]}">${priorityLabels[task.priority] || task.priority}</span>
     <span class="panel-badge owner-${task.owner}">👤 ${getOwnerLabel(task.owner)}</span>
     ${dueBadge}
@@ -2628,6 +2710,7 @@ function openPanel(taskId) {
 }
 
 function closePanel() {
+  currentPanelTaskId = null;
   document.getElementById('panelOverlay').classList.remove('open');
   document.getElementById('detailPanel').classList.remove('open');
   history.replaceState(null, '', window.location.pathname);
@@ -2643,7 +2726,9 @@ function toggleSubtask(taskId, index) {
 }
 
 function copyLink() {
-  const url = window.location.href;
+  const url = currentPanelTaskId
+    ? `${window.location.origin}${window.location.pathname}?task=${encodeURIComponent(currentPanelTaskId)}`
+    : window.location.href;
   navigator.clipboard.writeText(url).then(() => {
     const btn = document.getElementById('copyLinkBtn');
     btn.classList.add('copied');
@@ -2659,9 +2744,9 @@ document.addEventListener('keydown', e => {
 
 // Hash routing — runs after render() so panel DOM exists
 function checkHashRoute() {
-  const hash = window.location.hash.slice(1);
-  if (hash && TASKS.find(t => t.id === hash)) {
-    openPanel(hash);
+  const routeTask = getTaskFromRoute();
+  if (routeTask && TASKS.find(t => t.id === routeTask)) {
+    openPanel(routeTask);
   }
 }
 
