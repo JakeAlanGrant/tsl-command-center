@@ -1020,6 +1020,29 @@ body {
   color: var(--text-muted);
   font-size: 10.5px;
 }
+.task-chat-log {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.task-chat-log-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+.task-chat-log-time {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.task-chat-log-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
 
 /* Mobile panel */
 @media (max-width: 640px) {
@@ -2710,18 +2733,23 @@ function openPanel(taskId) {
       </div>`;
   }
 
-  // Task Chat (V1)
+  // Task Chat (V2)
   const savedNote = getTaskChatNote(task.id);
+  const log = getTaskChatLog(task.id);
+  const logHtml = log.length
+    ? `<div class="task-chat-log">${log.map(entry => `<div class="task-chat-log-item"><div class="task-chat-log-time">${entry.ts}</div><div class="task-chat-log-text">${entry.text}</div></div>`).join('')}</div>`
+    : '';
   bodyHTML += `
     <div class="panel-section">
       <div class="panel-section-title">Chat with Mimir</div>
       <textarea class="task-chat-box" id="taskChatInput" placeholder="Type an update, blocker, or request for this task...">${savedNote || ''}</textarea>
       <div class="task-chat-actions">
-        <button class="task-chat-btn primary" onclick="sendTaskChat('${task.id}')">Send to Mimir</button>
-        <button class="task-chat-btn" onclick="saveTaskChat('${task.id}')">Save Note</button>
+        <button class="task-chat-btn primary" onclick="sendTaskChat('${task.id}')">Add to Task Inbox</button>
+        <button class="task-chat-btn" onclick="saveTaskChat('${task.id}')">Save Draft</button>
         <button class="task-chat-btn" onclick="clearTaskChat('${task.id}')">Clear</button>
       </div>
-      <div class="task-chat-meta">Includes task ID/title automatically when sending.</div>
+      <div class="task-chat-meta">V2: stays in-board (no Telegram popup). I can review this inbox on request.</div>
+      ${logHtml}
     </div>`;
 
   // Subtasks
@@ -2821,6 +2849,16 @@ function getTaskChatMap() {
   catch { return {}; }
 }
 
+function getTaskChatLogMap() {
+  try { return JSON.parse(localStorage.getItem('taskChatLog') || '{}'); }
+  catch { return {}; }
+}
+
+function getTaskChatLog(taskId) {
+  const map = getTaskChatLogMap();
+  return map[taskId] || [];
+}
+
 function getTaskChatNote(taskId) {
   const map = getTaskChatMap();
   return map[taskId] || '';
@@ -2847,16 +2885,17 @@ function sendTaskChat(taskId) {
   if (!input) return;
   const note = input.value.trim();
   if (!note) return;
-  saveTaskChat(taskId);
 
-  const task = TASKS.find(t => t.id === taskId);
-  if (!task) return;
-
+  const logMap = getTaskChatLogMap();
+  if (!logMap[taskId]) logMap[taskId] = [];
   const ts = new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
-  const msg = `Task Update\n${task.id} — ${task.title}\nTime: ${ts}\n\n${note}`;
+  logMap[taskId].unshift({ ts, text: note });
+  logMap[taskId] = logMap[taskId].slice(0, 20);
+  localStorage.setItem('taskChatLog', JSON.stringify(logMap));
 
-  const tgUrl = `https://t.me/share/url?url=${encodeURIComponent('https://jakealangrant.github.io/tsl-command-center/?task=' + task.id)}&text=${encodeURIComponent(msg)}`;
-  window.open(tgUrl, '_blank', 'noopener');
+  input.value = '';
+  saveTaskChat(taskId);
+  openPanel(taskId);
 }
 
 // Keyboard close
