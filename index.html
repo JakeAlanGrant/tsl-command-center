@@ -2518,6 +2518,14 @@ let activeStatusFilter = 'all';
 let currentPanelTaskId = null;
 let dragTaskId = null;
 
+const RELAY_URL_KEY = 'jag_board_relay_url_v1';
+const RELAY_ENABLED_KEY = 'jag_board_relay_enabled_v1';
+
+function getRelayUrl() { return localStorage.getItem(RELAY_URL_KEY) || ''; }
+function setRelayUrl(v) { localStorage.setItem(RELAY_URL_KEY, (v || '').trim()); }
+function relayEnabled() { return localStorage.getItem(RELAY_ENABLED_KEY) === '1'; }
+function setRelayEnabled(v) { localStorage.setItem(RELAY_ENABLED_KEY, v ? '1' : '0'); }
+
 const STATUS_OVERRIDES_KEY = 'jag_board_status_overrides_v1';
 const PRIORITY_OVERRIDES_KEY = 'jag_board_priority_overrides_v1';
 const OWNER_OVERRIDES_KEY = 'jag_board_owner_overrides_v1';
@@ -2815,6 +2823,17 @@ function openPanel(taskId) {
       <div class="task-chat-actions" style="margin-top:12px;">
         <button class="task-chat-btn primary" onclick="applyQuickEdit('${task.id}')">Save Changes</button>
       </div>
+      <div class="task-chat-meta" style="margin-top:10px;">Live relay (V5)</div>
+      <div class="quick-edit-grid" style="margin-top:6px; grid-template-columns: 1fr auto;">
+        <input id="relayUrlInput" class="quick-edit-input" type="url" placeholder="Relay webhook URL" value="${getRelayUrl()}" />
+        <label style="display:flex;align-items:center;gap:8px;color:var(--text-secondary);font-size:11px;">
+          <input id="relayEnabledInput" type="checkbox" ${relayEnabled() ? 'checked' : ''} /> On
+        </label>
+      </div>
+      <div class="task-chat-actions" style="margin-top:8px;">
+        <button class="task-chat-btn" onclick="saveRelaySettings()">Save Relay</button>
+        <button class="task-chat-btn" onclick="testRelay('${task.id}')">Test Ping</button>
+      </div>
     </div>`;
 
   // Description
@@ -3010,6 +3029,9 @@ function sendTaskChat(taskId) {
   unreadMap[taskId] = true;
   localStorage.setItem('taskChatUnread', JSON.stringify(unreadMap));
 
+  const task = TASKS.find(t => t.id === taskId);
+  sendRelayEvent('task_message', { taskId, title: task ? task.title : taskId, text: note });
+
   input.value = '';
   saveTaskChat(taskId);
   render();
@@ -3040,6 +3062,26 @@ function applyQuickEdit(taskId) {
   openPanel(taskId);
 }
 
+function saveRelaySettings() {
+  const url = document.getElementById('relayUrlInput')?.value || '';
+  const enabled = !!document.getElementById('relayEnabledInput')?.checked;
+  setRelayUrl(url);
+  setRelayEnabled(enabled);
+}
+
+async function testRelay(taskId) {
+  saveRelaySettings();
+  const task = TASKS.find(t => t.id === taskId);
+  const ok = await sendRelayEvent('relay_test', { taskId, title: task ? task.title : taskId, text: 'Relay test from board V5' });
+  const logMap = getTaskChatLogMap();
+  if (!logMap[taskId]) logMap[taskId] = [];
+  const ts = new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
+  logMap[taskId].unshift({ ts, text: ok ? 'Relay test succeeded.' : 'Relay test failed (check URL/enabled).' });
+  localStorage.setItem('taskChatLog', JSON.stringify(logMap));
+  render();
+  openPanel(taskId);
+}
+
 function getDonePingQueue() {
   try { return JSON.parse(localStorage.getItem('donePingQueue') || '[]'); }
   catch { return []; }
@@ -3047,6 +3089,22 @@ function getDonePingQueue() {
 
 function saveDonePingQueue(items) {
   localStorage.setItem('donePingQueue', JSON.stringify(items));
+}
+
+async function sendRelayEvent(eventType, payload) {
+  if (!relayEnabled()) return false;
+  const url = getRelayUrl();
+  if (!url) return false;
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: 'jag-board', eventType, at: new Date().toISOString(), payload })
+    });
+    return res.ok;
+  } catch (_) {
+    return false;
+  }
 }
 
 function queueDonePing(taskId) {
@@ -3060,13 +3118,15 @@ function queueDonePing(taskId) {
 
   const logMap = getTaskChatLogMap();
   if (!logMap[taskId]) logMap[taskId] = [];
-  logMap[taskId].unshift({ ts, text: 'Moved to DONE — ping queued for Mimir (V4).' });
+  logMap[taskId].unshift({ ts, text: 'Moved to DONE — ping queued for Mimir (V5).' });
   logMap[taskId] = logMap[taskId].slice(0, 20);
   localStorage.setItem('taskChatLog', JSON.stringify(logMap));
 
   const unreadMap = getTaskChatUnreadMap();
   unreadMap[taskId] = true;
   localStorage.setItem('taskChatUnread', JSON.stringify(unreadMap));
+
+  sendRelayEvent('task_done', { taskId, title: task.title, status: 'done' });
 }
 
 // Keyboard close
