@@ -976,6 +976,51 @@ body {
   border: 1px solid var(--border-subtle);
 }
 
+/* Task Chat (V1) */
+.task-chat-box {
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding: 10px 12px;
+  outline: none;
+}
+.task-chat-box:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 2px rgba(91,141,248,0.15);
+}
+.task-chat-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.task-chat-btn {
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.task-chat-btn.primary {
+  background: rgba(91,141,248,0.16);
+  border-color: rgba(91,141,248,0.45);
+  color: #b8d1ff;
+}
+.task-chat-meta {
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+}
+
 /* Mobile panel */
 @media (max-width: 640px) {
   .detail-panel { width: 100vw; right: -100vw; }
@@ -2665,6 +2710,20 @@ function openPanel(taskId) {
       </div>`;
   }
 
+  // Task Chat (V1)
+  const savedNote = getTaskChatNote(task.id);
+  bodyHTML += `
+    <div class="panel-section">
+      <div class="panel-section-title">Chat with Mimir</div>
+      <textarea class="task-chat-box" id="taskChatInput" placeholder="Type an update, blocker, or request for this task...">${savedNote || ''}</textarea>
+      <div class="task-chat-actions">
+        <button class="task-chat-btn primary" onclick="sendTaskChat('${task.id}')">Send to Mimir</button>
+        <button class="task-chat-btn" onclick="saveTaskChat('${task.id}')">Save Note</button>
+        <button class="task-chat-btn" onclick="clearTaskChat('${task.id}')">Clear</button>
+      </div>
+      <div class="task-chat-meta">Includes task ID/title automatically when sending.</div>
+    </div>`;
+
   // Subtasks
   if (task.subtasks && task.subtasks.length > 0) {
     const stateKey = task.id;
@@ -2755,6 +2814,49 @@ function copyLink() {
     btn.textContent = '✓';
     setTimeout(() => { btn.textContent = '🔗'; btn.classList.remove('copied'); }, 2000);
   });
+}
+
+function getTaskChatMap() {
+  try { return JSON.parse(localStorage.getItem('taskChatNotes') || '{}'); }
+  catch { return {}; }
+}
+
+function getTaskChatNote(taskId) {
+  const map = getTaskChatMap();
+  return map[taskId] || '';
+}
+
+function saveTaskChat(taskId) {
+  const input = document.getElementById('taskChatInput');
+  if (!input) return;
+  const map = getTaskChatMap();
+  const val = input.value.trim();
+  if (val) map[taskId] = val;
+  else delete map[taskId];
+  localStorage.setItem('taskChatNotes', JSON.stringify(map));
+}
+
+function clearTaskChat(taskId) {
+  const input = document.getElementById('taskChatInput');
+  if (input) input.value = '';
+  saveTaskChat(taskId);
+}
+
+function sendTaskChat(taskId) {
+  const input = document.getElementById('taskChatInput');
+  if (!input) return;
+  const note = input.value.trim();
+  if (!note) return;
+  saveTaskChat(taskId);
+
+  const task = TASKS.find(t => t.id === taskId);
+  if (!task) return;
+
+  const ts = new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
+  const msg = `Task Update\n${task.id} — ${task.title}\nTime: ${ts}\n\n${note}`;
+
+  const tgUrl = `https://t.me/share/url?url=${encodeURIComponent('https://jakealangrant.github.io/tsl-command-center/?task=' + task.id)}&text=${encodeURIComponent(msg)}`;
+  window.open(tgUrl, '_blank', 'noopener');
 }
 
 // Keyboard close
