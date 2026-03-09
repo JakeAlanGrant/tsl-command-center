@@ -396,6 +396,18 @@ body {
   margin-top: 1px;
 }
 
+.card-chat-badge {
+  margin-left: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #7dd3fc;
+  background: rgba(34,211,238,0.12);
+  border: 1px solid rgba(34,211,238,0.4);
+  border-radius: 999px;
+  padding: 2px 6px;
+  line-height: 1;
+}
+
 .card-meta {
   display: flex;
   justify-content: space-between;
@@ -2537,6 +2549,7 @@ function createCard(task) {
   const today = new Date().toISOString().split('T')[0];
   let dueClass = '';
   let dueText = '';
+  const hasUnreadChat = getTaskChatUnread(task.id);
   
   if (task.due) {
     if (task.due < today) {
@@ -2563,7 +2576,7 @@ function createCard(task) {
       <div class="card-priority ${task.priority}"></div>
       <div class="card-top">
         <div class="card-title">${task.title}</div>
-        <div class="card-id">${task.id}</div>
+        <div class="card-id">${task.id}${hasUnreadChat ? '<span class="card-chat-badge">💬 new</span>' : ''}</div>
       </div>
       ${task.blocker ? `<div class="card-blocker">${task.blocker}</div>` : ''}
       <div class="card-meta">
@@ -2745,6 +2758,7 @@ function openPanel(taskId) {
       <textarea class="task-chat-box" id="taskChatInput" placeholder="Type an update, blocker, or request for this task...">${savedNote || ''}</textarea>
       <div class="task-chat-actions">
         <button class="task-chat-btn primary" onclick="sendTaskChat('${task.id}')">Add to Task Inbox</button>
+        <button class="task-chat-btn" onclick="markTaskChatAddressed('${task.id}')">Mark Addressed</button>
         <button class="task-chat-btn" onclick="saveTaskChat('${task.id}')">Save Draft</button>
         <button class="task-chat-btn" onclick="clearTaskChat('${task.id}')">Clear</button>
       </div>
@@ -2854,6 +2868,16 @@ function getTaskChatLogMap() {
   catch { return {}; }
 }
 
+function getTaskChatUnreadMap() {
+  try { return JSON.parse(localStorage.getItem('taskChatUnread') || '{}'); }
+  catch { return {}; }
+}
+
+function getTaskChatUnread(taskId) {
+  const map = getTaskChatUnreadMap();
+  return !!map[taskId];
+}
+
 function getTaskChatLog(taskId) {
   const map = getTaskChatLogMap();
   return map[taskId] || [];
@@ -2893,8 +2917,21 @@ function sendTaskChat(taskId) {
   logMap[taskId] = logMap[taskId].slice(0, 20);
   localStorage.setItem('taskChatLog', JSON.stringify(logMap));
 
+  const unreadMap = getTaskChatUnreadMap();
+  unreadMap[taskId] = true;
+  localStorage.setItem('taskChatUnread', JSON.stringify(unreadMap));
+
   input.value = '';
   saveTaskChat(taskId);
+  render();
+  openPanel(taskId);
+}
+
+function markTaskChatAddressed(taskId) {
+  const unreadMap = getTaskChatUnreadMap();
+  delete unreadMap[taskId];
+  localStorage.setItem('taskChatUnread', JSON.stringify(unreadMap));
+  render();
   openPanel(taskId);
 }
 
