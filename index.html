@@ -2627,8 +2627,15 @@ function onColumnDrop(event) {
   const taskId = event.dataTransfer.getData('text/plain') || dragTaskId;
   if (!taskId || !newStatus) return;
 
+  const prevStatus = getTaskStatus(TASKS.find(t => t.id === taskId) || { status: 'queued' });
+
   statusOverrides[taskId] = newStatus;
   saveStatusOverrides();
+
+  if (newStatus === 'done' && prevStatus !== 'done') {
+    queueDonePing(taskId);
+  }
+
   render();
 
   if (currentPanelTaskId === taskId) {
@@ -2933,6 +2940,35 @@ function markTaskChatAddressed(taskId) {
   localStorage.setItem('taskChatUnread', JSON.stringify(unreadMap));
   render();
   openPanel(taskId);
+}
+
+function getDonePingQueue() {
+  try { return JSON.parse(localStorage.getItem('donePingQueue') || '[]'); }
+  catch { return []; }
+}
+
+function saveDonePingQueue(items) {
+  localStorage.setItem('donePingQueue', JSON.stringify(items));
+}
+
+function queueDonePing(taskId) {
+  const task = TASKS.find(t => t.id === taskId);
+  if (!task) return;
+
+  const queue = getDonePingQueue();
+  const ts = new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
+  queue.unshift({ taskId, title: task.title, ts });
+  saveDonePingQueue(queue.slice(0, 50));
+
+  const logMap = getTaskChatLogMap();
+  if (!logMap[taskId]) logMap[taskId] = [];
+  logMap[taskId].unshift({ ts, text: 'Moved to DONE — ping queued for Mimir (V4).' });
+  logMap[taskId] = logMap[taskId].slice(0, 20);
+  localStorage.setItem('taskChatLog', JSON.stringify(logMap));
+
+  const unreadMap = getTaskChatUnreadMap();
+  unreadMap[taskId] = true;
+  localStorage.setItem('taskChatUnread', JSON.stringify(unreadMap));
 }
 
 // Keyboard close
