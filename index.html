@@ -577,16 +577,29 @@ body {
 
   /* ─── METRICS ─── */
   .metrics-bar {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
     gap: 8px;
     padding: 10px 12px;
-    overflow-x: unset;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
+  .metrics-bar::-webkit-scrollbar { display: none; }
   .metric {
-    min-width: unset;
-    padding: 10px 12px;
+    min-width: 110px;
+    flex-shrink: 0;
+    padding: 12px 14px;
     border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+  .metric:active { transform: scale(0.96); }
+  .metric.metric-active {
+    outline: 2px solid var(--accent-blue);
+    background: rgba(91,141,248,0.1);
   }
   .metric-value { font-size: 22px; }
   .metric-label { font-size: 10px; letter-spacing: 0.5px; }
@@ -694,7 +707,6 @@ body {
 }
 
 @media (max-width: 480px) {
-  .metrics-bar { grid-template-columns: repeat(2, 1fr); }
   .logo { font-size: 13px; }
 }
 
@@ -1191,23 +1203,23 @@ body {
 
 <!-- ─── METRICS ─── -->
 <div class="metrics-bar">
-  <div class="metric">
+  <div class="metric" onclick="filterByMetric('urgent', this)">
     <div class="metric-value" style="color: var(--accent-red)" id="metricUrgent">3</div>
     <div class="metric-label">Urgent</div>
   </div>
-  <div class="metric">
+  <div class="metric" onclick="filterByMetric('progress', this)">
     <div class="metric-value" style="color: var(--accent-cyan)" id="metricProgress">4</div>
     <div class="metric-label">In Progress</div>
   </div>
-  <div class="metric">
+  <div class="metric" onclick="filterByMetric('blocked', this)">
     <div class="metric-value" style="color: var(--accent-red)" id="metricBlocked">2</div>
     <div class="metric-label">Blocked</div>
   </div>
-  <div class="metric">
+  <div class="metric" onclick="filterByMetric('done', this)">
     <div class="metric-value" style="color: var(--accent-green)" id="metricDone">6</div>
     <div class="metric-label">Done (7d)</div>
   </div>
-  <div class="metric">
+  <div class="metric" onclick="filterByMetric('all', this)">
     <div class="metric-value" style="color: var(--text-secondary)" id="metricTotal">15</div>
     <div class="metric-label">Total Active</div>
   </div>
@@ -2357,6 +2369,19 @@ const TASKS = [
 
 let activeOwnerFilter = 'all';
 let activePriorityFilter = 'all';
+let activeStatusFilter = 'all';
+
+function filterByMetric(status, el) {
+  if (activeStatusFilter === status && status !== 'all') {
+    activeStatusFilter = 'all';
+    document.querySelectorAll('.metric').forEach(m => m.classList.remove('metric-active'));
+  } else {
+    activeStatusFilter = status;
+    document.querySelectorAll('.metric').forEach(m => m.classList.remove('metric-active'));
+    if (el && status !== 'all') el.classList.add('metric-active');
+  }
+  render();
+}
 
 // Subtask state (in-memory toggle, resets on reload)
 const subtaskState = {};
@@ -2423,6 +2448,11 @@ function render() {
   const filtered = TASKS.filter(t => {
     if (activeOwnerFilter !== 'all' && t.owner !== activeOwnerFilter) return false;
     if (activePriorityFilter !== 'all' && t.priority !== activePriorityFilter) return false;
+    if (activeStatusFilter === 'urgent') {
+      if (!t.priority || !t.priority.includes('urgent')) return false;
+    } else if (activeStatusFilter !== 'all' && t.status !== activeStatusFilter) {
+      return false;
+    }
     return true;
   });
 
