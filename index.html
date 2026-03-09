@@ -1056,6 +1056,27 @@ body {
   line-height: 1.45;
 }
 
+.quick-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.quick-edit-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.quick-edit-input {
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
 /* Mobile panel */
 @media (max-width: 640px) {
   .detail-panel { width: 100vw; right: -100vw; }
@@ -2498,20 +2519,28 @@ let currentPanelTaskId = null;
 let dragTaskId = null;
 
 const STATUS_OVERRIDES_KEY = 'jag_board_status_overrides_v1';
+const PRIORITY_OVERRIDES_KEY = 'jag_board_priority_overrides_v1';
+const OWNER_OVERRIDES_KEY = 'jag_board_owner_overrides_v1';
+const DUE_OVERRIDES_KEY = 'jag_board_due_overrides_v1';
+
 let statusOverrides = {};
-try {
-  statusOverrides = JSON.parse(localStorage.getItem(STATUS_OVERRIDES_KEY) || '{}');
-} catch (_) {
-  statusOverrides = {};
-}
+let priorityOverrides = {};
+let ownerOverrides = {};
+let dueOverrides = {};
+try { statusOverrides = JSON.parse(localStorage.getItem(STATUS_OVERRIDES_KEY) || '{}'); } catch (_) { statusOverrides = {}; }
+try { priorityOverrides = JSON.parse(localStorage.getItem(PRIORITY_OVERRIDES_KEY) || '{}'); } catch (_) { priorityOverrides = {}; }
+try { ownerOverrides = JSON.parse(localStorage.getItem(OWNER_OVERRIDES_KEY) || '{}'); } catch (_) { ownerOverrides = {}; }
+try { dueOverrides = JSON.parse(localStorage.getItem(DUE_OVERRIDES_KEY) || '{}'); } catch (_) { dueOverrides = {}; }
 
-function getTaskStatus(task) {
-  return statusOverrides[task.id] || task.status;
-}
+function getTaskStatus(task) { return statusOverrides[task.id] || task.status; }
+function getTaskPriority(task) { return priorityOverrides[task.id] || task.priority; }
+function getTaskOwner(task) { return ownerOverrides[task.id] || task.owner; }
+function getTaskDue(task) { return (task.id in dueOverrides) ? dueOverrides[task.id] : task.due; }
 
-function saveStatusOverrides() {
-  localStorage.setItem(STATUS_OVERRIDES_KEY, JSON.stringify(statusOverrides));
-}
+function saveStatusOverrides() { localStorage.setItem(STATUS_OVERRIDES_KEY, JSON.stringify(statusOverrides)); }
+function savePriorityOverrides() { localStorage.setItem(PRIORITY_OVERRIDES_KEY, JSON.stringify(priorityOverrides)); }
+function saveOwnerOverrides() { localStorage.setItem(OWNER_OVERRIDES_KEY, JSON.stringify(ownerOverrides)); }
+function saveDueOverrides() { localStorage.setItem(DUE_OVERRIDES_KEY, JSON.stringify(dueOverrides)); }
 
 function getTaskFromRoute() {
   const params = new URLSearchParams(window.location.search);
@@ -2550,30 +2579,34 @@ function createCard(task) {
   let dueClass = '';
   let dueText = '';
   const hasUnreadChat = getTaskChatUnread(task.id);
+  const effectiveOwner = getTaskOwner(task);
+  const effectivePriority = getTaskPriority(task);
+  const effectiveDue = getTaskDue(task);
+  const effectiveStatus = getTaskStatus(task);
   
-  if (task.due) {
-    if (task.due < today) {
+  if (effectiveDue) {
+    if (effectiveDue < today) {
       dueClass = 'overdue';
-      const days = Math.floor((new Date(today) - new Date(task.due)) / 86400000);
+      const days = Math.floor((new Date(today) - new Date(effectiveDue)) / 86400000);
       dueText = `${days}d overdue`;
-    } else if (task.due === today) {
+    } else if (effectiveDue === today) {
       dueClass = 'today';
       dueText = 'TODAY';
     } else {
-      const days = Math.floor((new Date(task.due) - new Date(today)) / 86400000);
-      dueText = days <= 7 ? `${days}d left` : task.due.slice(5);
+      const days = Math.floor((new Date(effectiveDue) - new Date(today)) / 86400000);
+      dueText = days <= 7 ? `${days}d left` : effectiveDue.slice(5);
     }
   }
 
-  const ownerClass = task.owner === 'mimir' ? 'mimir' : 
-                     task.owner === 'josh' ? 'josh' : 
-                     task.owner === 'ops-manager' ? 'ops-manager' :
-                     task.owner === 'sales-manager' ? 'sales-manager' :
-                     task.owner === 'recruiting-manager' ? 'recruiting-manager' : '';
+  const ownerClass = effectiveOwner === 'mimir' ? 'mimir' : 
+                     effectiveOwner === 'josh' ? 'josh' : 
+                     effectiveOwner === 'ops-manager' ? 'ops-manager' :
+                     effectiveOwner === 'sales-manager' ? 'sales-manager' :
+                     effectiveOwner === 'recruiting-manager' ? 'recruiting-manager' : '';
 
   return `
-    <div class="card" data-owner="${task.owner}" data-priority="${task.priority}" data-task-id="${task.id}" draggable="true" onclick="handleCardClick(event, '${task.id}')" ondragstart="onCardDragStart(event, '${task.id}')" ondragend="onCardDragEnd(event)">
-      <div class="card-priority ${task.priority}"></div>
+    <div class="card" data-owner="${effectiveOwner}" data-priority="${effectivePriority}" data-task-id="${task.id}" draggable="true" onclick="handleCardClick(event, '${task.id}')" ondragstart="onCardDragStart(event, '${task.id}')" ondragend="onCardDragEnd(event)">
+      <div class="card-priority ${effectivePriority}"></div>
       <div class="card-top">
         <div class="card-title">${task.title}</div>
         <div class="card-id">${task.id}${hasUnreadChat ? '<span class="card-chat-badge">💬 new</span>' : ''}</div>
@@ -2581,10 +2614,10 @@ function createCard(task) {
       ${task.blocker ? `<div class="card-blocker">${task.blocker}</div>` : ''}
       <div class="card-meta">
         <div class="card-tags">
-          <span class="tag tag-owner ${ownerClass}">${getOwnerLabel(task.owner)}</span>
+          <span class="tag tag-owner ${ownerClass}">${getOwnerLabel(effectiveOwner)}</span>
           <span class="tag tag-category">${task.category}</span>
         </div>
-        ${(dueText && task.status !== 'done') ? `<div class="card-due ${dueClass}">${dueText}</div>` : ''}
+        ${(dueText && effectiveStatus !== 'done') ? `<div class="card-due ${dueClass}">${dueText}</div>` : ''}
       </div>
     </div>
   `;
@@ -2650,10 +2683,12 @@ function render() {
   };
 
   const filtered = TASKS.filter(t => {
-    if (activeOwnerFilter !== 'all' && t.owner !== activeOwnerFilter) return false;
-    if (activePriorityFilter !== 'all' && t.priority !== activePriorityFilter) return false;
+    const owner = getTaskOwner(t);
+    const priority = getTaskPriority(t);
+    if (activeOwnerFilter !== 'all' && owner !== activeOwnerFilter) return false;
+    if (activePriorityFilter !== 'all' && priority !== activePriorityFilter) return false;
     if (activeStatusFilter === 'urgent') {
-      if (!t.priority || !t.priority.includes('urgent')) return false;
+      if (!priority || !priority.includes('urgent')) return false;
     } else if (activeStatusFilter !== 'all' && getTaskStatus(t) !== activeStatusFilter) {
       return false;
     }
@@ -2667,7 +2702,7 @@ function render() {
 
   const priorityOrder = { 'urgent-important': 0, 'important': 1, 'urgent': 2, 'low': 3 };
   Object.keys(columns).forEach(col => {
-    columns[col].sort((a, b) => (priorityOrder[a.priority] || 3) - (priorityOrder[b.priority] || 3));
+    columns[col].sort((a, b) => (priorityOrder[getTaskPriority(a)] || 3) - (priorityOrder[getTaskPriority(b)] || 3));
   });
 
   document.getElementById('colBacklog').innerHTML = columns.backlog.map(createCard).join('');
@@ -2713,12 +2748,17 @@ function openPanel(taskId) {
 
   // Meta badges
   const today = new Date().toISOString().split('T')[0];
+  const effectiveStatus = getTaskStatus(task);
+  const effectivePriority = getTaskPriority(task);
+  const effectiveOwner = getTaskOwner(task);
+  const effectiveDue = getTaskDue(task);
+
   let dueBadge = '';
-  if (task.due) {
+  if (effectiveDue) {
     let dueClass = 'due-badge';
-    let dueLabel = task.due;
-    if (task.due < today) { dueClass += ' overdue'; dueLabel = 'Overdue: ' + task.due; }
-    else if (task.due === today) { dueClass += ' today'; dueLabel = 'Due Today'; }
+    let dueLabel = effectiveDue;
+    if (effectiveDue < today) { dueClass += ' overdue'; dueLabel = 'Overdue: ' + effectiveDue; }
+    else if (effectiveDue === today) { dueClass += ' today'; dueLabel = 'Due Today'; }
     dueBadge = `<span class="panel-badge ${dueClass}">📅 ${dueLabel}</span>`;
   }
 
@@ -2726,14 +2766,56 @@ function openPanel(taskId) {
   const priorityClasses = { 'urgent-important': '', 'important': 'important', 'urgent': 'urgent', 'low': 'low' };
 
   document.getElementById('panelMeta').innerHTML = `
-    <span class="panel-badge status-${getTaskStatus(task)}">${getTaskStatus(task).toUpperCase()}</span>
-    <span class="panel-badge priority-ui ${priorityClasses[task.priority]}">${priorityLabels[task.priority] || task.priority}</span>
-    <span class="panel-badge owner-${task.owner}">👤 ${getOwnerLabel(task.owner)}</span>
+    <span class="panel-badge status-${effectiveStatus}">${effectiveStatus.toUpperCase()}</span>
+    <span class="panel-badge priority-ui ${priorityClasses[effectivePriority]}">${priorityLabels[effectivePriority] || effectivePriority}</span>
+    <span class="panel-badge owner-${effectiveOwner}">👤 ${getOwnerLabel(effectiveOwner)}</span>
     ${dueBadge}
   `;
 
   // Body
   let bodyHTML = '';
+
+  // Quick Edit
+  bodyHTML += `
+    <div class="panel-section">
+      <div class="panel-section-title">Quick Edit</div>
+      <div class="quick-edit-grid">
+        <label>Status
+          <select id="qeStatus" class="quick-edit-input">
+            <option value="backlog" ${effectiveStatus==='backlog'?'selected':''}>Backlog</option>
+            <option value="queued" ${effectiveStatus==='queued'?'selected':''}>Queued</option>
+            <option value="progress" ${effectiveStatus==='progress'?'selected':''}>In Progress</option>
+            <option value="blocked" ${effectiveStatus==='blocked'?'selected':''}>Blocked</option>
+            <option value="review" ${effectiveStatus==='review'?'selected':''}>Review</option>
+            <option value="done" ${effectiveStatus==='done'?'selected':''}>Done</option>
+          </select>
+        </label>
+        <label>Priority
+          <select id="qePriority" class="quick-edit-input">
+            <option value="urgent-important" ${effectivePriority==='urgent-important'?'selected':''}>Urgent + Important</option>
+            <option value="important" ${effectivePriority==='important'?'selected':''}>Important</option>
+            <option value="urgent" ${effectivePriority==='urgent'?'selected':''}>Urgent</option>
+            <option value="low" ${effectivePriority==='low'?'selected':''}>Low</option>
+          </select>
+        </label>
+        <label>Owner
+          <select id="qeOwner" class="quick-edit-input">
+            <option value="jake" ${effectiveOwner==='jake'?'selected':''}>Jake</option>
+            <option value="mimir" ${effectiveOwner==='mimir'?'selected':''}>Mimir</option>
+            <option value="josh" ${effectiveOwner==='josh'?'selected':''}>Josh</option>
+            <option value="ops-manager" ${effectiveOwner==='ops-manager'?'selected':''}>Ops Mgr</option>
+            <option value="sales-manager" ${effectiveOwner==='sales-manager'?'selected':''}>Sales Mgr</option>
+            <option value="recruiting-manager" ${effectiveOwner==='recruiting-manager'?'selected':''}>Recruiting Mgr</option>
+          </select>
+        </label>
+        <label>Due Date
+          <input id="qeDue" class="quick-edit-input" type="date" value="${effectiveDue || ''}" />
+        </label>
+      </div>
+      <div class="task-chat-actions" style="margin-top:12px;">
+        <button class="task-chat-btn primary" onclick="applyQuickEdit('${task.id}')">Save Changes</button>
+      </div>
+    </div>`;
 
   // Description
   if (task.description) {
@@ -2938,6 +3020,22 @@ function markTaskChatAddressed(taskId) {
   const unreadMap = getTaskChatUnreadMap();
   delete unreadMap[taskId];
   localStorage.setItem('taskChatUnread', JSON.stringify(unreadMap));
+  render();
+  openPanel(taskId);
+}
+
+function applyQuickEdit(taskId) {
+  const status = document.getElementById('qeStatus')?.value;
+  const priority = document.getElementById('qePriority')?.value;
+  const owner = document.getElementById('qeOwner')?.value;
+  const due = document.getElementById('qeDue')?.value || null;
+
+  if (status) { statusOverrides[taskId] = status; saveStatusOverrides(); }
+  if (priority) { priorityOverrides[taskId] = priority; savePriorityOverrides(); }
+  if (owner) { ownerOverrides[taskId] = owner; saveOwnerOverrides(); }
+  dueOverrides[taskId] = due;
+  saveDueOverrides();
+
   render();
   openPanel(taskId);
 }
