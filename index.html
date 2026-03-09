@@ -333,7 +333,7 @@ body {
   transition: var(--transition);
   position: relative;
   box-shadow: var(--shadow-card);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .card:hover {
@@ -378,11 +378,13 @@ body {
 .card-title {
   font-size: 13.5px;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.5;
+  display: block;
   flex: 1;
-  padding-left: 9px;
+  padding: 2px 0 2px 9px;
   color: var(--text-primary);
   letter-spacing: -0.1px;
+  overflow: visible;
 }
 
 .card-id {
