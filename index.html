@@ -559,17 +559,23 @@ body {
 
 /* ─── MOBILE ─── */
 @media (max-width: 768px) {
-  /* Header */
+  /* ─── BODY / ROOT ─── */
+  body { overflow: auto; height: auto; }
+
+  /* ─── HEADER ─── */
   .header {
     flex-direction: row;
     align-items: center;
     padding: 12px 16px;
     gap: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
   }
   .header-stats { gap: 10px; }
   .last-updated { display: none; }
 
-  /* Metrics — 3-column grid */
+  /* ─── METRICS ─── */
   .metrics-bar {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -582,53 +588,100 @@ body {
     padding: 10px 12px;
     border-radius: 10px;
   }
-  .metric-value { font-size: 20px; }
+  .metric-value { font-size: 22px; }
   .metric-label { font-size: 10px; letter-spacing: 0.5px; }
 
-  /* Filters — horizontal scroll strip */
+  /* ─── FILTERS ─── */
   .filter-bar {
     flex-wrap: nowrap;
     overflow-x: auto;
-    padding: 8px 12px;
-    gap: 6px;
+    padding: 10px 12px;
+    gap: 8px;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
   .filter-bar::-webkit-scrollbar { display: none; }
   .filter-label { display: none; }
   .filter-divider { display: none; }
-  .filter-btn { flex-shrink: 0; padding: 6px 14px; font-size: 12px; }
+  .filter-btn { flex-shrink: 0; padding: 7px 16px; font-size: 13px; }
 
-  /* Board — horizontal swipe with snap */
+  /* ─── BOARD — vertical stacked columns ─── */
   .board {
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+    height: auto;
+    gap: 0;
+    padding-bottom: 40px;
   }
 
-  /* Columns — full-width swipeable cards */
+  /* ─── COLUMNS — full width, auto height ─── */
   .column {
-    min-width: 92vw;
-    max-width: 92vw;
+    min-width: 100%;
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+    min-height: unset;
     flex-shrink: 0;
-    height: 100%;
     border-right: none;
-    scroll-snap-align: start;
-    scroll-snap-stop: always;
+    border-bottom: 2px solid var(--border-subtle);
+    overflow: visible;
   }
 
-  /* Cards — better touch targets */
-  .card { padding: 14px 13px 12px; }
-  .card-title { font-size: 14px; }
+  /* Column cards scroll area — unconstrained */
+  .column-cards {
+    overflow-y: visible;
+    height: auto;
+    max-height: unset;
+    padding: 10px 12px 16px;
+    gap: 8px;
+  }
+
+  /* ─── CARDS ─── */
+  .card {
+    padding: 14px 13px 12px;
+    overflow: visible;
+  }
+  .card-top {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .card-title {
+    font-size: 14px;
+    line-height: 1.45;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
+    padding-left: 0;
+  }
+  .card-id {
+    font-size: 10px;
+    margin-left: 0;
+    margin-top: 0;
+    color: var(--text-muted);
+  }
   .card-meta { margin-top: 10px; }
   .tag { padding: 3px 9px; font-size: 11px; }
 
-  /* Legend */
-  .legend { padding: 10px 12px; gap: 10px; }
+  /* ─── COLUMN HEADER ─── */
+  .column-header {
+    padding: 14px 16px 10px;
+    background: var(--bg-secondary);
+    border-bottom: 2px solid var(--border);
+    position: sticky;
+    top: 57px;
+    z-index: 10;
+  }
+
+  /* ─── LEGEND ─── */
+  .legend {
+    padding: 10px 12px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
   .legend-item { font-size: 11px; }
 
-  /* Detail panel — full screen */
+  /* ─── DETAIL PANEL ─── */
   .detail-panel {
     width: 100vw;
     right: -100vw;
@@ -642,7 +695,6 @@ body {
 
 @media (max-width: 480px) {
   .metrics-bar { grid-template-columns: repeat(2, 1fr); }
-  .column { min-width: 96vw; max-width: 96vw; }
   .logo { font-size: 13px; }
 }
 
