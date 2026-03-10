@@ -1063,6 +1063,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 .task-chat-log-item {
   background: var(--bg-card);
@@ -1080,6 +1083,16 @@ body {
   color: var(--text-secondary);
   white-space: pre-wrap;
   line-height: 1.45;
+}
+.chat-who-you {
+  color: #8fb5ff;
+  font-weight: 700;
+  margin-right: 6px;
+}
+.chat-who-mimir {
+  color: #7ee7ff;
+  font-weight: 700;
+  margin-right: 6px;
 }
 
 .quick-edit-grid {
@@ -2640,9 +2653,15 @@ const RELAY_URL_KEY = 'jag_board_relay_url_v1';
 const RELAY_ENABLED_KEY = 'jag_board_relay_enabled_v1';
 
 function getRelayUrl() {
+  try {
+    const fromStorage = (localStorage.getItem(RELAY_URL_KEY) || '').trim();
+    if (fromStorage) return fromStorage;
+  } catch (_) {}
   return 'https://relatives-designing-sports-ipaq.trycloudflare.com';
 }
-function setRelayUrl(_v) {}
+function setRelayUrl(v) {
+  try { localStorage.setItem(RELAY_URL_KEY, String(v || '').trim()); } catch (_) {}
+}
 function relayEnabled() { return true; }
 function setRelayEnabled(_v) {}
 
@@ -2992,8 +3011,7 @@ function openPanel(taskId) {
   const priorityClasses = { 'urgent-important': '', 'important': 'important', 'urgent': 'urgent', 'low': 'low' };
 
   document.getElementById('panelMeta').innerHTML = `
-    <span class="panel-badge editable" onclick="openMetaEditor('title')">✏️ Rename task</span>
-    <span class="panel-badge editable status-${effectiveStatus}" onclick="openMetaEditor('status')">${({backlog:'BACKLOG',queued:'QUEUED',progress:'FOCUS',inprogress:'IN PROGRESS',blocked:'BLOCKED',review:'REVIEW',done:'DONE'})[effectiveStatus] || effectiveStatus.toUpperCase()}</span>
+        <span class="panel-badge editable status-${effectiveStatus}" onclick="openMetaEditor('status')">${({backlog:'BACKLOG',queued:'QUEUED',progress:'FOCUS',inprogress:'IN PROGRESS',blocked:'BLOCKED',review:'REVIEW',done:'DONE'})[effectiveStatus] || effectiveStatus.toUpperCase()}</span>
     <span class="panel-badge editable priority-ui ${priorityClasses[effectivePriority]}" onclick="openMetaEditor('priority')">${priorityLabels[effectivePriority] || effectivePriority}</span>
     <span class="panel-badge editable owner-${effectiveOwner}" onclick="openMetaEditor('owner')">👤 ${getOwnerLabel(effectiveOwner)}</span>
     ${effectiveDue ? `<span class="panel-badge editable due-badge" onclick="openMetaEditor('due')">📅 ${effectiveDue}</span>` : `<span class="panel-badge editable due-badge" onclick="openMetaEditor('due')">📅 Set due date</span>`}
@@ -3026,14 +3044,20 @@ function openPanel(taskId) {
   const savedNote = getTaskChatNote(task.id);
   const log = getTaskChatLog(task.id).filter(entry => !String(entry.text || '').toLowerCase().includes('relay delivery'));
   const logHtml = log.length
-    ? `<div class="task-chat-log">${log.map(entry => `<div class="task-chat-log-item"><div class="task-chat-log-time">${entry.ts}</div><div class="task-chat-log-text">${entry.text}</div></div>`).join('')}</div>`
+    ? `<div class="task-chat-log">${log.map(entry => {
+        const sender = String(entry.sender || '').toLowerCase();
+        const isYou = sender === 'you' || sender === 'jake' || sender === 'user';
+        const who = isYou ? 'You' : 'Mimir';
+        const whoClass = isYou ? 'chat-who-you' : 'chat-who-mimir';
+        return `<div class="task-chat-log-item"><div class="task-chat-log-time">${entry.ts}</div><div class="task-chat-log-text"><span class="${whoClass}">${who}</span> ${entry.text}</div></div>`;
+      }).join('')}</div>`
     : '';
   bodyHTML += `
     <div class="panel-section">
       <div class="panel-section-title">Chat with Mimir</div>
       <textarea class="task-chat-box" id="taskChatInput" placeholder="Type an update, blocker, or request for this task...">${savedNote || ''}</textarea>
       <div class="task-chat-actions">
-        <button class="task-chat-btn primary" onclick="sendTaskChat('${task.id}')">Add to Task Inbox</button>
+        <button class="task-chat-btn primary" onclick="sendTaskChat('${task.id}')">Send</button>
         <button class="task-chat-btn" onclick="markTaskChatAddressed('${task.id}')">Mark Addressed</button>
         <button class="task-chat-btn" onclick="saveTaskChat('${task.id}')">Save Draft</button>
         <button class="task-chat-btn" onclick="clearTaskChat('${task.id}')">Clear</button>
@@ -3099,6 +3123,7 @@ function openPanel(taskId) {
   }
 
   document.getElementById('panelBody').innerHTML = bodyHTML;
+  setTimeout(scrollTaskChatToBottom, 0);
   startTaskReplyPolling(taskId);
 
   // Open
@@ -3197,7 +3222,7 @@ async function sendTaskChat(taskId) {
   const logMap = getTaskChatLogMap();
   if (!logMap[taskId]) logMap[taskId] = [];
   const ts = new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
-  logMap[taskId].unshift({ ts, text: note });
+  logMap[taskId].push({ ts, text: note, sender: 'you' });
   logMap[taskId] = logMap[taskId].slice(0, 20);
   localStorage.setItem('taskChatLog', JSON.stringify(logMap));
 
@@ -3210,7 +3235,7 @@ async function sendTaskChat(taskId) {
 
   if (!ok) {
     const ts2 = new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
-    logMap[taskId].unshift({ ts: ts2, text: 'Relay delivery failed (check Save Relay / URL / toggle)' });
+    logMap[taskId].push({ ts: ts2, text: 'Relay delivery failed (check Save Relay / URL / toggle)', sender: 'mimir' });
     logMap[taskId] = logMap[taskId].slice(0, 20);
     localStorage.setItem('taskChatLog', JSON.stringify(logMap));
   }
@@ -3334,7 +3359,7 @@ async function testRelay(taskId) {
   const logMap = getTaskChatLogMap();
   if (!logMap[taskId]) logMap[taskId] = [];
   const ts = new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
-  logMap[taskId].unshift({ ts, text: ok ? 'Relay test succeeded.' : 'Relay test failed (check URL/enabled).' });
+  logMap[taskId].push({ ts, text: ok ? 'Relay test succeeded.' : 'Relay test failed (check URL/enabled).', sender: 'mimir' });
   localStorage.setItem('taskChatLog', JSON.stringify(logMap));
   render();
   openPanel(taskId);
@@ -3354,6 +3379,12 @@ function getRelayApiBase() {
   return raw.replace(/\/$/, '');
 }
 
+
+function scrollTaskChatToBottom() {
+  const logEl = document.querySelector('.task-chat-log');
+  if (logEl) logEl.scrollTop = logEl.scrollHeight;
+}
+
 function stopTaskReplyPolling() {
   if (taskReplyPollTimer) {
     clearInterval(taskReplyPollTimer);
@@ -3366,7 +3397,7 @@ function startTaskReplyPolling(taskId) {
   syncTaskReplies(taskId);
   taskReplyPollTimer = setInterval(() => {
     if (currentPanelTaskId === taskId) syncTaskReplies(taskId);
-  }, 7000);
+  }, 3000);
 }
 
 async function syncTaskReplies(taskId, forceOpen = false) {
@@ -3388,8 +3419,8 @@ async function syncTaskReplies(taskId, forceOpen = false) {
       if (!item || !item.id || existing.has(item.id)) continue;
       const ts = item.ts || new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
       const from = item.from || 'Mimir';
-      const text = `${from}: ${item.text || ''}`.trim();
-      logMap[taskId].unshift({ ts, text, replyId: item.id });
+      const text = `${item.text || ''}`.trim();
+      logMap[taskId].push({ ts, text, sender: from, replyId: item.id });
       existing.add(item.id);
       added++;
     }
@@ -3437,7 +3468,7 @@ function queueDonePing(taskId) {
 
   const logMap = getTaskChatLogMap();
   if (!logMap[taskId]) logMap[taskId] = [];
-  logMap[taskId].unshift({ ts, text: 'Moved to DONE — ping queued for Mimir (V5).' });
+  logMap[taskId].push({ ts, text: 'Moved to DONE — ping queued for Mimir (V5).', sender: 'mimir' });
   logMap[taskId] = logMap[taskId].slice(0, 20);
   localStorage.setItem('taskChatLog', JSON.stringify(logMap));
 
@@ -3450,7 +3481,7 @@ function queueDonePing(taskId) {
       const logMap2 = getTaskChatLogMap();
       if (!logMap2[taskId]) logMap2[taskId] = [];
       const ts2 = new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
-      logMap2[taskId].unshift({ ts: ts2, text: 'Relay delivery failed (done event)' });
+      logMap2[taskId].push({ ts: ts2, text: 'Relay delivery failed (done event)', sender: 'mimir' });
       logMap2[taskId] = logMap2[taskId].slice(0, 20);
       localStorage.setItem('taskChatLog', JSON.stringify(logMap2));
     }
