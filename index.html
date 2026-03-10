@@ -2847,7 +2847,7 @@ function openPanel(taskId) {
 
   // Task Chat (V2)
   const savedNote = getTaskChatNote(task.id);
-  const log = getTaskChatLog(task.id);
+  const log = getTaskChatLog(task.id).filter(entry => !String(entry.text || '').toLowerCase().includes('relay delivery'));
   const logHtml = log.length
     ? `<div class="task-chat-log">${log.map(entry => `<div class="task-chat-log-item"><div class="task-chat-log-time">${entry.ts}</div><div class="task-chat-log-text">${entry.text}</div></div>`).join('')}</div>`
     : '';
@@ -3001,6 +3001,12 @@ function clearTaskChat(taskId) {
   const input = document.getElementById('taskChatInput');
   if (input) input.value = '';
   saveTaskChat(taskId);
+
+  const logMap = getTaskChatLogMap();
+  if (logMap[taskId]) {
+    logMap[taskId] = logMap[taskId].filter(entry => !String(entry.text || '').toLowerCase().includes('relay delivery'));
+    localStorage.setItem('taskChatLog', JSON.stringify(logMap));
+  }
 }
 
 async function sendTaskChat(taskId) {
