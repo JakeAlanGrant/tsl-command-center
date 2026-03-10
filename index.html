@@ -2542,9 +2542,12 @@ let dragTaskId = null;
 const RELAY_URL_KEY = 'jag_board_relay_url_v1';
 const RELAY_ENABLED_KEY = 'jag_board_relay_enabled_v1';
 
-function getRelayUrl() { return localStorage.getItem(RELAY_URL_KEY) || ''; }
+function getRelayUrl() { return localStorage.getItem(RELAY_URL_KEY) || `${window.location.protocol}//${window.location.hostname}:8787`; }
 function setRelayUrl(v) { localStorage.setItem(RELAY_URL_KEY, (v || '').trim()); }
-function relayEnabled() { return localStorage.getItem(RELAY_ENABLED_KEY) === '1'; }
+function relayEnabled() {
+  const v = localStorage.getItem(RELAY_ENABLED_KEY);
+  return v === null ? true : v === '1';
+}
 function setRelayEnabled(v) { localStorage.setItem(RELAY_ENABLED_KEY, v ? '1' : '0'); }
 
 const STATUS_OVERRIDES_KEY = 'jag_board_status_overrides_v1';
