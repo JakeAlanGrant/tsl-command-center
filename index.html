@@ -2939,7 +2939,7 @@ function render() {
   document.getElementById('countReview').textContent = columns.review.length;
   document.getElementById('countDone').textContent = columns.done.length;
 
-  const active = TASKS.filter(t => t.status !== 'done');
+  const active = TASKS.filter(t => getTaskStatus(t) !== 'done');
   document.getElementById('metricUrgent').textContent = active.filter(t => t.priority === 'urgent-important').length;
   document.getElementById('metricProgress').textContent = TASKS.filter(t => ['progress','inprogress'].includes(getTaskStatus(t))).length;
   document.getElementById('metricBlocked').textContent = TASKS.filter(t => getTaskStatus(t) === 'blocked').length;
