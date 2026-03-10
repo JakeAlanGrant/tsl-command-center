@@ -27,6 +27,7 @@
   --col-backlog:    #3b3b55;
   --col-queued:     #2d3a62;
   --col-progress:   #1e3a4e;
+  --col-inprogress: #0f4c5c;
   --col-blocked:    #3d2222;
   --col-review:     #3a2d52;
   --col-done:       #1a3a2e;
@@ -300,6 +301,10 @@ body {
 .col-progress .column-header { border-bottom-color: var(--accent-cyan); }
 .col-progress .column-title  { color: var(--accent-cyan); }
 .col-progress .column-count  { color: var(--accent-cyan); }
+
+.col-inprogress .column-header { border-bottom-color: var(--col-inprogress); }
+.col-inprogress .column-title  { color: #7dd3fc; }
+.col-inprogress .column-count  { color: #7dd3fc; }
 
 .col-blocked  .column-header { border-bottom-color: var(--accent-red); }
 .col-blocked  .column-title  { color: var(--accent-red); }
@@ -837,6 +842,7 @@ body {
 }
 
 .panel-badge.status-progress { background: rgba(34,211,238,0.1);  color: var(--accent-cyan);   border-color: rgba(34,211,238,0.2); }
+.panel-badge.status-inprogress { background: rgba(125,211,252,0.1); color: #7dd3fc; border-color: rgba(125,211,252,0.2); }
 .panel-badge.status-blocked  { background: rgba(241,107,107,0.1); color: var(--accent-red);    border-color: rgba(241,107,107,0.2); }
 .panel-badge.status-queued   { background: rgba(91,141,248,0.1);  color: var(--accent-blue);   border-color: rgba(91,141,248,0.2); }
 .panel-badge.status-review   { background: rgba(167,139,250,0.1); color: var(--accent-purple); border-color: rgba(167,139,250,0.2); }
@@ -1412,16 +1418,28 @@ body {
     <div class="column-cards" id="colQueued" data-status="queued" ondragover="onColumnDragOver(event)" ondragleave="onColumnDragLeave(event)" ondrop="onColumnDrop(event)"></div>
   </div>
 
-  <!-- IN PROGRESS -->
+  <!-- FOCUS -->
   <div class="column col-progress">
     <div class="column-header">
       <div class="column-header-top">
-        <div class="column-title">In Progress</div>
+        <div class="column-title">Focus</div>
         <div class="column-count" id="countProgress">0</div>
+      </div>
+      <div class="column-wip">Most important items right now</div>
+    </div>
+    <div class="column-cards" id="colProgress" data-status="progress" ondragover="onColumnDragOver(event)" ondragleave="onColumnDragLeave(event)" ondrop="onColumnDrop(event)"></div>
+  </div>
+
+  <!-- IN PROGRESS -->
+  <div class="column col-inprogress">
+    <div class="column-header">
+      <div class="column-header-top">
+        <div class="column-title">In Progress</div>
+        <div class="column-count" id="countInProgress">0</div>
       </div>
       <div class="column-wip">WIP limit: 5</div>
     </div>
-    <div class="column-cards" id="colProgress" data-status="progress" ondragover="onColumnDragOver(event)" ondragleave="onColumnDragLeave(event)" ondrop="onColumnDrop(event)"></div>
+    <div class="column-cards" id="colInProgress" data-status="inprogress" ondragover="onColumnDragOver(event)" ondragleave="onColumnDragLeave(event)" ondrop="onColumnDrop(event)"></div>
   </div>
 
   <!-- BLOCKED -->
@@ -2563,25 +2581,30 @@ const STATUS_OVERRIDES_KEY = 'jag_board_status_overrides_v1';
 const PRIORITY_OVERRIDES_KEY = 'jag_board_priority_overrides_v1';
 const OWNER_OVERRIDES_KEY = 'jag_board_owner_overrides_v1';
 const DUE_OVERRIDES_KEY = 'jag_board_due_overrides_v1';
+const ACTIVITY_OVERRIDES_KEY = 'jag_board_activity_overrides_v1';
 
 let statusOverrides = {};
 let priorityOverrides = {};
 let ownerOverrides = {};
 let dueOverrides = {};
+let activityOverrides = {};
 try { statusOverrides = JSON.parse(localStorage.getItem(STATUS_OVERRIDES_KEY) || '{}'); } catch (_) { statusOverrides = {}; }
 try { priorityOverrides = JSON.parse(localStorage.getItem(PRIORITY_OVERRIDES_KEY) || '{}'); } catch (_) { priorityOverrides = {}; }
 try { ownerOverrides = JSON.parse(localStorage.getItem(OWNER_OVERRIDES_KEY) || '{}'); } catch (_) { ownerOverrides = {}; }
 try { dueOverrides = JSON.parse(localStorage.getItem(DUE_OVERRIDES_KEY) || '{}'); } catch (_) { dueOverrides = {}; }
+try { activityOverrides = JSON.parse(localStorage.getItem(ACTIVITY_OVERRIDES_KEY) || '{}'); } catch (_) { activityOverrides = {}; }
 
 function getTaskStatus(task) { return statusOverrides[task.id] || task.status; }
 function getTaskPriority(task) { return priorityOverrides[task.id] || task.priority; }
 function getTaskOwner(task) { return ownerOverrides[task.id] || task.owner; }
 function getTaskDue(task) { return (task.id in dueOverrides) ? dueOverrides[task.id] : task.due; }
+function getTaskActivity(task) { return activityOverrides[task.id] || 0; }
 
 function saveStatusOverrides() { localStorage.setItem(STATUS_OVERRIDES_KEY, JSON.stringify(statusOverrides)); }
 function savePriorityOverrides() { localStorage.setItem(PRIORITY_OVERRIDES_KEY, JSON.stringify(priorityOverrides)); }
 function saveOwnerOverrides() { localStorage.setItem(OWNER_OVERRIDES_KEY, JSON.stringify(ownerOverrides)); }
 function saveDueOverrides() { localStorage.setItem(DUE_OVERRIDES_KEY, JSON.stringify(dueOverrides)); }
+function saveActivityOverrides() { localStorage.setItem(ACTIVITY_OVERRIDES_KEY, JSON.stringify(activityOverrides)); }
 
 function getTaskFromRoute() {
   const params = new URLSearchParams(window.location.search);
@@ -2703,8 +2726,18 @@ function onColumnDrop(event) {
 
   const prevStatus = getTaskStatus(TASKS.find(t => t.id === taskId) || { status: 'queued' });
 
+  if (newStatus === 'inprogress' && prevStatus !== 'inprogress') {
+    const currentInProgress = TASKS.filter(t => getTaskStatus(t) === 'inprogress').length;
+    if (currentInProgress >= 5) {
+      alert('WIP limit reached: max 5 tasks in In Progress. Move one out first.');
+      return;
+    }
+  }
+
   statusOverrides[taskId] = newStatus;
   saveStatusOverrides();
+  activityOverrides[taskId] = Date.now();
+  saveActivityOverrides();
 
   if (newStatus === 'done' && prevStatus !== 'done') {
     queueDonePing(taskId);
@@ -2723,7 +2756,7 @@ function onColumnDrop(event) {
 
 function render() {
   const columns = {
-    backlog: [], queued: [], progress: [], 
+    backlog: [], queued: [], progress: [], inprogress: [],
     blocked: [], review: [], done: []
   };
 
@@ -2747,12 +2780,18 @@ function render() {
 
   const priorityOrder = { 'urgent-important': 0, 'important': 1, 'urgent': 2, 'low': 3 };
   Object.keys(columns).forEach(col => {
-    columns[col].sort((a, b) => (priorityOrder[getTaskPriority(a)] || 3) - (priorityOrder[getTaskPriority(b)] || 3));
+    columns[col].sort((a, b) => {
+      const ad = getTaskActivity(a);
+      const bd = getTaskActivity(b);
+      if (ad !== bd) return bd - ad;
+      return (priorityOrder[getTaskPriority(a)] || 3) - (priorityOrder[getTaskPriority(b)] || 3);
+    });
   });
 
   document.getElementById('colBacklog').innerHTML = columns.backlog.map(createCard).join('');
   document.getElementById('colQueued').innerHTML = columns.queued.map(createCard).join('');
   document.getElementById('colProgress').innerHTML = columns.progress.map(createCard).join('');
+  document.getElementById('colInProgress').innerHTML = columns.inprogress.map(createCard).join('');
   document.getElementById('colBlocked').innerHTML = columns.blocked.map(createCard).join('');
   document.getElementById('colReview').innerHTML = columns.review.map(createCard).join('');
   document.getElementById('colDone').innerHTML = columns.done.map(createCard).join('');
@@ -2760,13 +2799,14 @@ function render() {
   document.getElementById('countBacklog').textContent = columns.backlog.length;
   document.getElementById('countQueued').textContent = columns.queued.length;
   document.getElementById('countProgress').textContent = columns.progress.length;
+  document.getElementById('countInProgress').textContent = columns.inprogress.length;
   document.getElementById('countBlocked').textContent = columns.blocked.length;
   document.getElementById('countReview').textContent = columns.review.length;
   document.getElementById('countDone').textContent = columns.done.length;
 
   const active = TASKS.filter(t => t.status !== 'done');
   document.getElementById('metricUrgent').textContent = active.filter(t => t.priority === 'urgent-important').length;
-  document.getElementById('metricProgress').textContent = TASKS.filter(t => getTaskStatus(t) === 'progress').length;
+  document.getElementById('metricProgress').textContent = TASKS.filter(t => ['progress','inprogress'].includes(getTaskStatus(t))).length;
   document.getElementById('metricBlocked').textContent = TASKS.filter(t => getTaskStatus(t) === 'blocked').length;
   document.getElementById('metricDone').textContent = TASKS.filter(t => getTaskStatus(t) === 'done').length;
   document.getElementById('metricTotal').textContent = active.length;
@@ -2811,7 +2851,7 @@ function openPanel(taskId) {
   const priorityClasses = { 'urgent-important': '', 'important': 'important', 'urgent': 'urgent', 'low': 'low' };
 
   document.getElementById('panelMeta').innerHTML = `
-    <span class="panel-badge editable status-${effectiveStatus}" onclick="openMetaEditor('status')">${effectiveStatus.toUpperCase()}</span>
+    <span class="panel-badge editable status-${effectiveStatus}" onclick="openMetaEditor('status')">${({backlog:'BACKLOG',queued:'QUEUED',progress:'FOCUS',inprogress:'IN PROGRESS',blocked:'BLOCKED',review:'REVIEW',done:'DONE'})[effectiveStatus] || effectiveStatus.toUpperCase()}</span>
     <span class="panel-badge editable priority-ui ${priorityClasses[effectivePriority]}" onclick="openMetaEditor('priority')">${priorityLabels[effectivePriority] || effectivePriority}</span>
     <span class="panel-badge editable owner-${effectiveOwner}" onclick="openMetaEditor('owner')">👤 ${getOwnerLabel(effectiveOwner)}</span>
     ${effectiveDue ? `<span class="panel-badge editable due-badge" onclick="openMetaEditor('due')">📅 ${effectiveDue}</span>` : `<span class="panel-badge editable due-badge" onclick="openMetaEditor('due')">📅 Set due date</span>`}
@@ -3059,7 +3099,8 @@ function openMetaEditor(field) {
     inputHtml = `<select id="metaEditValue" class="meta-edit-input">
       <option value="backlog" ${status==='backlog'?'selected':''}>Backlog</option>
       <option value="queued" ${status==='queued'?'selected':''}>Queued</option>
-      <option value="progress" ${status==='progress'?'selected':''}>In Progress</option>
+      <option value="progress" ${status==='progress'?'selected':''}>Focus</option>
+      <option value="inprogress" ${status==='inprogress'?'selected':''}>In Progress</option>
       <option value="blocked" ${status==='blocked'?'selected':''}>Blocked</option>
       <option value="review" ${status==='review'?'selected':''}>Review</option>
       <option value="done" ${status==='done'?'selected':''}>Done</option>
