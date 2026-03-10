@@ -2543,26 +2543,11 @@ const RELAY_URL_KEY = 'jag_board_relay_url_v1';
 const RELAY_ENABLED_KEY = 'jag_board_relay_enabled_v1';
 
 function getRelayUrl() {
-  const fallback = 'https://relatives-designing-sports-ipaq.trycloudflare.com';
-  const saved = localStorage.getItem(RELAY_URL_KEY);
-  if (!saved) return fallback;
-  // migrate stale relay URLs automatically
-  if (
-    saved.includes('127.0.0.1:8787') ||
-    saved.includes('awareness-lawsuit-symptoms-phil.trycloudflare.com') ||
-    saved.includes('localhost:8787')
-  ) {
-    localStorage.setItem(RELAY_URL_KEY, fallback);
-    return fallback;
-  }
-  return saved;
+  return 'https://relatives-designing-sports-ipaq.trycloudflare.com';
 }
-function setRelayUrl(v) { localStorage.setItem(RELAY_URL_KEY, (v || '').trim()); }
-function relayEnabled() {
-  const v = localStorage.getItem(RELAY_ENABLED_KEY);
-  return v === null ? true : v === '1';
-}
-function setRelayEnabled(v) { localStorage.setItem(RELAY_ENABLED_KEY, v ? '1' : '0'); }
+function setRelayUrl(_v) {}
+function relayEnabled() { return true; }
+function setRelayEnabled(_v) {}
 
 const STATUS_OVERRIDES_KEY = 'jag_board_status_overrides_v1';
 const PRIORITY_OVERRIDES_KEY = 'jag_board_priority_overrides_v1';
