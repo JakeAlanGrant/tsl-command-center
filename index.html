@@ -2863,7 +2863,11 @@ function openPanel(taskId) {
   // Header
   document.getElementById('panelId').textContent = task.id + ' · ' + task.category;
   const effectiveTitle = getTaskTitle(task);
-  document.getElementById('panelTitle').textContent = effectiveTitle;
+  const panelTitleEl = document.getElementById('panelTitle');
+  panelTitleEl.textContent = effectiveTitle;
+  panelTitleEl.title = 'Click to rename task';
+  panelTitleEl.style.cursor = 'pointer';
+  panelTitleEl.onclick = () => openMetaEditor('title');
 
   // Meta badges
   const today = new Date().toISOString().split('T')[0];
