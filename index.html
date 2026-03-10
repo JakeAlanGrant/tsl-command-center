@@ -3019,10 +3019,12 @@ async function sendTaskChat(taskId) {
   const task = TASKS.find(t => t.id === taskId);
   const ok = await sendRelayEvent('task_message', { taskId, title: task ? task.title : taskId, text: note });
 
-  const ts2 = new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
-  logMap[taskId].unshift({ ts: ts2, text: ok ? 'Relay delivery: success' : 'Relay delivery: failed (check Save Relay / URL / toggle)' });
-  logMap[taskId] = logMap[taskId].slice(0, 20);
-  localStorage.setItem('taskChatLog', JSON.stringify(logMap));
+  if (!ok) {
+    const ts2 = new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
+    logMap[taskId].unshift({ ts: ts2, text: 'Relay delivery failed (check Save Relay / URL / toggle)' });
+    logMap[taskId] = logMap[taskId].slice(0, 20);
+    localStorage.setItem('taskChatLog', JSON.stringify(logMap));
+  }
 
   input.value = '';
   saveTaskChat(taskId);
@@ -3184,12 +3186,14 @@ function queueDonePing(taskId) {
   localStorage.setItem('taskChatUnread', JSON.stringify(unreadMap));
 
   sendRelayEvent('task_done', { taskId, title: task.title, status: 'done' }).then(ok => {
-    const logMap2 = getTaskChatLogMap();
-    if (!logMap2[taskId]) logMap2[taskId] = [];
-    const ts2 = new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
-    logMap2[taskId].unshift({ ts: ts2, text: ok ? 'Relay delivery: success (done event)' : 'Relay delivery: failed (done event)' });
-    logMap2[taskId] = logMap2[taskId].slice(0, 20);
-    localStorage.setItem('taskChatLog', JSON.stringify(logMap2));
+    if (!ok) {
+      const logMap2 = getTaskChatLogMap();
+      if (!logMap2[taskId]) logMap2[taskId] = [];
+      const ts2 = new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
+      logMap2[taskId].unshift({ ts: ts2, text: 'Relay delivery failed (done event)' });
+      logMap2[taskId] = logMap2[taskId].slice(0, 20);
+      localStorage.setItem('taskChatLog', JSON.stringify(logMap2));
+    }
   });
 }
 
