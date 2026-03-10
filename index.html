@@ -2634,6 +2634,7 @@ let activePriorityFilter = 'all';
 let activeStatusFilter = 'all';
 let currentPanelTaskId = null;
 let dragTaskId = null;
+let taskReplyPollTimer = null;
 
 const RELAY_URL_KEY = 'jag_board_relay_url_v1';
 const RELAY_ENABLED_KEY = 'jag_board_relay_enabled_v1';
@@ -3033,11 +3034,12 @@ function openPanel(taskId) {
       <textarea class="task-chat-box" id="taskChatInput" placeholder="Type an update, blocker, or request for this task...">${savedNote || ''}</textarea>
       <div class="task-chat-actions">
         <button class="task-chat-btn primary" onclick="sendTaskChat('${task.id}')">Add to Task Inbox</button>
+        <button class="task-chat-btn" onclick="syncTaskReplies('${task.id}', true)">Check Replies</button>
         <button class="task-chat-btn" onclick="markTaskChatAddressed('${task.id}')">Mark Addressed</button>
         <button class="task-chat-btn" onclick="saveTaskChat('${task.id}')">Save Draft</button>
         <button class="task-chat-btn" onclick="clearTaskChat('${task.id}')">Clear</button>
       </div>
-      <div class="task-chat-meta">V2: stays in-board (no Telegram popup). I can review this inbox on request.</div>
+      <div class="task-chat-meta">Replies sync from relay when panel is open. Use “Check Replies” anytime.</div>
       ${logHtml}
     </div>`;
 
@@ -3098,6 +3100,7 @@ function openPanel(taskId) {
   }
 
   document.getElementById('panelBody').innerHTML = bodyHTML;
+  startTaskReplyPolling(taskId);
 
   // Open
   document.getElementById('panelOverlay').classList.add('open');
@@ -3106,6 +3109,7 @@ function openPanel(taskId) {
 }
 
 function closePanel() {
+  stopTaskReplyPolling();
   currentPanelTaskId = null;
   document.getElementById('panelOverlay').classList.remove('open');
   document.getElementById('detailPanel').classList.remove('open');
@@ -3344,6 +3348,67 @@ function getDonePingQueue() {
 
 function saveDonePingQueue(items) {
   localStorage.setItem('donePingQueue', JSON.stringify(items));
+}
+
+function getRelayApiBase() {
+  const raw = getRelayUrl() || '';
+  return raw.replace(/\/$/, '');
+}
+
+function stopTaskReplyPolling() {
+  if (taskReplyPollTimer) {
+    clearInterval(taskReplyPollTimer);
+    taskReplyPollTimer = null;
+  }
+}
+
+function startTaskReplyPolling(taskId) {
+  stopTaskReplyPolling();
+  syncTaskReplies(taskId);
+  taskReplyPollTimer = setInterval(() => {
+    if (currentPanelTaskId === taskId) syncTaskReplies(taskId);
+  }, 7000);
+}
+
+async function syncTaskReplies(taskId, forceOpen = false) {
+  if (!relayEnabled()) return false;
+  const base = getRelayApiBase();
+  if (!base) return false;
+  try {
+    const res = await fetch(`${base}/replies?taskId=${encodeURIComponent(taskId)}&limit=30`);
+    if (!res.ok) return false;
+    const data = await res.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+
+    const logMap = getTaskChatLogMap();
+    if (!logMap[taskId]) logMap[taskId] = [];
+    const existing = new Set(logMap[taskId].map(e => e.replyId).filter(Boolean));
+
+    let added = 0;
+    for (const item of items) {
+      if (!item || !item.id || existing.has(item.id)) continue;
+      const ts = item.ts || new Date().toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
+      const from = item.from || 'Mimir';
+      const text = `${from}: ${item.text || ''}`.trim();
+      logMap[taskId].unshift({ ts, text, replyId: item.id });
+      existing.add(item.id);
+      added++;
+    }
+
+    if (added > 0) {
+      logMap[taskId] = logMap[taskId].slice(0, 40);
+      localStorage.setItem('taskChatLog', JSON.stringify(logMap));
+      const unreadMap = getTaskChatUnreadMap();
+      unreadMap[taskId] = true;
+      localStorage.setItem('taskChatUnread', JSON.stringify(unreadMap));
+      render();
+      if (forceOpen || currentPanelTaskId === taskId) openPanel(taskId);
+    }
+
+    return true;
+  } catch (_) {
+    return false;
+  }
 }
 
 async function sendRelayEvent(eventType, payload) {
