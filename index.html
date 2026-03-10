@@ -3437,15 +3437,25 @@ function filterPriority(priority, btn) {
 
   // ── Password Gate ──
   const BOARD_PW = 'JAG123';
-  function checkPw() {
-    const val = document.getElementById('pwInput').value;
-    const errEl = document.getElementById('pwError');
-    if (val === BOARD_PW) {
-      sessionStorage.setItem('jag_auth', '1');
-      document.getElementById('pwGate').style.display = 'none';
-      document.getElementById('boardWrap').classList.add('unlocked');
+  function unlockBoard() {
+    sessionStorage.setItem('jag_auth', '1');
+    document.getElementById('pwGate').style.display = 'none';
+    document.getElementById('boardWrap').classList.add('unlocked');
+    try {
       render();
-  checkHashRoute();
+      checkHashRoute();
+    } catch (e) {
+      console.error('Board render error after unlock:', e);
+    }
+  }
+
+  function checkPw() {
+    const raw = document.getElementById('pwInput').value;
+    const val = String(raw || '').trim();
+    const errEl = document.getElementById('pwError');
+    const ok = (val === BOARD_PW) || (val.toUpperCase() === BOARD_PW);
+    if (ok) {
+      unlockBoard();
     } else {
       errEl.textContent = 'Incorrect password. Try again.';
       const inp = document.getElementById('pwInput');
@@ -3461,6 +3471,9 @@ function filterPriority(priority, btn) {
   });
 
   // Auto-unlock if already authenticated this session
+  const __params = new URLSearchParams(window.location.search);
+  if (__params.get('auth') === 'JAG123') { unlockBoard(); }
+
   if (sessionStorage.getItem('jag_auth') === '1') {
     document.getElementById('pwGate').style.display = 'none';
     document.getElementById('boardWrap').classList.add('unlocked');
