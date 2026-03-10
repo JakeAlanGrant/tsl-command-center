@@ -2710,6 +2710,10 @@ function onColumnDrop(event) {
   if (newStatus === 'done' && prevStatus !== 'done') {
     queueDonePing(taskId);
   }
+  if (newStatus !== prevStatus) {
+    const task = TASKS.find(t => t.id === taskId);
+    sendRelayEvent('task_status_change', { taskId, title: task ? task.title : taskId, from: prevStatus, to: newStatus });
+  }
 
   render();
 
@@ -3086,10 +3090,26 @@ function applyMetaEdit(field) {
   const value = document.getElementById('metaEditValue')?.value;
   const prevStatus = getTaskStatus(TASKS.find(t => t.id === taskId) || { status: 'queued' });
 
-  if (field === 'status') { statusOverrides[taskId] = value; saveStatusOverrides(); }
-  if (field === 'priority') { priorityOverrides[taskId] = value; savePriorityOverrides(); }
-  if (field === 'owner') { ownerOverrides[taskId] = value; saveOwnerOverrides(); }
-  if (field === 'due') { dueOverrides[taskId] = value || null; saveDueOverrides(); }
+  const task = TASKS.find(t => t.id === taskId);
+  if (field === 'status') {
+    statusOverrides[taskId] = value; saveStatusOverrides();
+    if (value !== prevStatus) sendRelayEvent('task_status_change', { taskId, title: task ? task.title : taskId, from: prevStatus, to: value });
+  }
+  if (field === 'priority') {
+    const prev = getTaskPriority(task || { id: taskId, priority: null });
+    priorityOverrides[taskId] = value; savePriorityOverrides();
+    if (value !== prev) sendRelayEvent('task_priority_change', { taskId, title: task ? task.title : taskId, from: prev, to: value });
+  }
+  if (field === 'owner') {
+    const prev = getTaskOwner(task || { id: taskId, owner: null });
+    ownerOverrides[taskId] = value; saveOwnerOverrides();
+    if (value !== prev) sendRelayEvent('task_owner_change', { taskId, title: task ? task.title : taskId, from: prev, to: value });
+  }
+  if (field === 'due') {
+    const prev = getTaskDue(task || { id: taskId, due: null });
+    dueOverrides[taskId] = value || null; saveDueOverrides();
+    if ((value || null) !== (prev || null)) sendRelayEvent('task_due_change', { taskId, title: task ? task.title : taskId, from: prev || null, to: value || null });
+  }
 
   if (field === 'status' && value === 'done' && prevStatus !== 'done') {
     queueDonePing(taskId);
