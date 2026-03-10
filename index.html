@@ -3034,12 +3034,11 @@ function openPanel(taskId) {
       <textarea class="task-chat-box" id="taskChatInput" placeholder="Type an update, blocker, or request for this task...">${savedNote || ''}</textarea>
       <div class="task-chat-actions">
         <button class="task-chat-btn primary" onclick="sendTaskChat('${task.id}')">Add to Task Inbox</button>
-        <button class="task-chat-btn" onclick="syncTaskReplies('${task.id}', true)">Check Replies</button>
         <button class="task-chat-btn" onclick="markTaskChatAddressed('${task.id}')">Mark Addressed</button>
         <button class="task-chat-btn" onclick="saveTaskChat('${task.id}')">Save Draft</button>
         <button class="task-chat-btn" onclick="clearTaskChat('${task.id}')">Clear</button>
       </div>
-      <div class="task-chat-meta">Replies sync from relay when panel is open. Use “Check Replies” anytime.</div>
+      <div class="task-chat-meta">Replies auto-sync while this panel is open and appear inline below your message.</div>
       ${logHtml}
     </div>`;
 
