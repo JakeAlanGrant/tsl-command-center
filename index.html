@@ -1425,7 +1425,7 @@ body {
         <div class="column-title">Focus</div>
         <div class="column-count" id="countProgress">0</div>
       </div>
-      <div class="column-wip">Most important items right now</div>
+      <div class="column-wip">WIP limit: 5</div>
     </div>
     <div class="column-cards" id="colProgress" data-status="progress" ondragover="onColumnDragOver(event)" ondragleave="onColumnDragLeave(event)" ondrop="onColumnDrop(event)"></div>
   </div>
@@ -1437,7 +1437,7 @@ body {
         <div class="column-title">In Progress</div>
         <div class="column-count" id="countInProgress">0</div>
       </div>
-      <div class="column-wip">WIP limit: 5</div>
+      <div class="column-wip">Multiple active items allowed</div>
     </div>
     <div class="column-cards" id="colInProgress" data-status="inprogress" ondragover="onColumnDragOver(event)" ondragleave="onColumnDragLeave(event)" ondrop="onColumnDrop(event)"></div>
   </div>
@@ -2581,29 +2581,34 @@ const STATUS_OVERRIDES_KEY = 'jag_board_status_overrides_v1';
 const PRIORITY_OVERRIDES_KEY = 'jag_board_priority_overrides_v1';
 const OWNER_OVERRIDES_KEY = 'jag_board_owner_overrides_v1';
 const DUE_OVERRIDES_KEY = 'jag_board_due_overrides_v1';
+const TITLE_OVERRIDES_KEY = 'jag_board_title_overrides_v1';
 const ACTIVITY_OVERRIDES_KEY = 'jag_board_activity_overrides_v1';
 
 let statusOverrides = {};
 let priorityOverrides = {};
 let ownerOverrides = {};
 let dueOverrides = {};
+let titleOverrides = {};
 let activityOverrides = {};
 try { statusOverrides = JSON.parse(localStorage.getItem(STATUS_OVERRIDES_KEY) || '{}'); } catch (_) { statusOverrides = {}; }
 try { priorityOverrides = JSON.parse(localStorage.getItem(PRIORITY_OVERRIDES_KEY) || '{}'); } catch (_) { priorityOverrides = {}; }
 try { ownerOverrides = JSON.parse(localStorage.getItem(OWNER_OVERRIDES_KEY) || '{}'); } catch (_) { ownerOverrides = {}; }
 try { dueOverrides = JSON.parse(localStorage.getItem(DUE_OVERRIDES_KEY) || '{}'); } catch (_) { dueOverrides = {}; }
+try { titleOverrides = JSON.parse(localStorage.getItem(TITLE_OVERRIDES_KEY) || '{}'); } catch (_) { titleOverrides = {}; }
 try { activityOverrides = JSON.parse(localStorage.getItem(ACTIVITY_OVERRIDES_KEY) || '{}'); } catch (_) { activityOverrides = {}; }
 
 function getTaskStatus(task) { return statusOverrides[task.id] || task.status; }
 function getTaskPriority(task) { return priorityOverrides[task.id] || task.priority; }
 function getTaskOwner(task) { return ownerOverrides[task.id] || task.owner; }
 function getTaskDue(task) { return (task.id in dueOverrides) ? dueOverrides[task.id] : task.due; }
+function getTaskTitle(task) { return (task.id in titleOverrides) ? titleOverrides[task.id] : task.title; }
 function getTaskActivity(task) { return activityOverrides[task.id] || 0; }
 
 function saveStatusOverrides() { localStorage.setItem(STATUS_OVERRIDES_KEY, JSON.stringify(statusOverrides)); }
 function savePriorityOverrides() { localStorage.setItem(PRIORITY_OVERRIDES_KEY, JSON.stringify(priorityOverrides)); }
 function saveOwnerOverrides() { localStorage.setItem(OWNER_OVERRIDES_KEY, JSON.stringify(ownerOverrides)); }
 function saveDueOverrides() { localStorage.setItem(DUE_OVERRIDES_KEY, JSON.stringify(dueOverrides)); }
+function saveTitleOverrides() { localStorage.setItem(TITLE_OVERRIDES_KEY, JSON.stringify(titleOverrides)); }
 function saveActivityOverrides() { localStorage.setItem(ACTIVITY_OVERRIDES_KEY, JSON.stringify(activityOverrides)); }
 
 function getTaskFromRoute() {
@@ -2672,7 +2677,7 @@ function createCard(task) {
     <div class="card" data-owner="${effectiveOwner}" data-priority="${effectivePriority}" data-task-id="${task.id}" draggable="true" onclick="handleCardClick(event, '${task.id}')" ondragstart="onCardDragStart(event, '${task.id}')" ondragend="onCardDragEnd(event)">
       <div class="card-priority ${effectivePriority}"></div>
       <div class="card-top">
-        <div class="card-title">${task.title}</div>
+        <div class="card-title">${getTaskTitle(task)}</div>
         <div class="card-id">${task.id}${hasUnreadChat ? '<span class="card-chat-badge">💬 new</span>' : ''}</div>
       </div>
       ${task.blocker ? `<div class="card-blocker">${task.blocker}</div>` : ''}
@@ -2726,10 +2731,10 @@ function onColumnDrop(event) {
 
   const prevStatus = getTaskStatus(TASKS.find(t => t.id === taskId) || { status: 'queued' });
 
-  if (newStatus === 'inprogress' && prevStatus !== 'inprogress') {
-    const currentInProgress = TASKS.filter(t => getTaskStatus(t) === 'inprogress').length;
-    if (currentInProgress >= 5) {
-      alert('WIP limit reached: max 5 tasks in In Progress. Move one out first.');
+  if (newStatus === 'progress' && prevStatus !== 'progress') {
+    const currentFocus = TASKS.filter(t => getTaskStatus(t) === 'progress').length;
+    if (currentFocus >= 5) {
+      alert('Focus limit reached: max 5 tasks in Focus. Move one out first.');
       return;
     }
   }
@@ -2744,7 +2749,7 @@ function onColumnDrop(event) {
   }
   if (newStatus !== prevStatus) {
     const task = TASKS.find(t => t.id === taskId);
-    sendRelayEvent('task_status_change', { taskId, title: task ? task.title : taskId, from: prevStatus, to: newStatus });
+    sendRelayEvent('task_status_change', { taskId, title: task ? getTaskTitle(task) : taskId, from: prevStatus, to: newStatus });
   }
 
   render();
@@ -2829,7 +2834,8 @@ function openPanel(taskId) {
 
   // Header
   document.getElementById('panelId').textContent = task.id + ' · ' + task.category;
-  document.getElementById('panelTitle').textContent = task.title;
+  const effectiveTitle = getTaskTitle(task);
+  document.getElementById('panelTitle').textContent = effectiveTitle;
 
   // Meta badges
   const today = new Date().toISOString().split('T')[0];
@@ -2851,6 +2857,7 @@ function openPanel(taskId) {
   const priorityClasses = { 'urgent-important': '', 'important': 'important', 'urgent': 'urgent', 'low': 'low' };
 
   document.getElementById('panelMeta').innerHTML = `
+    <span class="panel-badge editable" onclick="openMetaEditor('title')">✏️ Rename task</span>
     <span class="panel-badge editable status-${effectiveStatus}" onclick="openMetaEditor('status')">${({backlog:'BACKLOG',queued:'QUEUED',progress:'FOCUS',inprogress:'IN PROGRESS',blocked:'BLOCKED',review:'REVIEW',done:'DONE'})[effectiveStatus] || effectiveStatus.toUpperCase()}</span>
     <span class="panel-badge editable priority-ui ${priorityClasses[effectivePriority]}" onclick="openMetaEditor('priority')">${priorityLabels[effectivePriority] || effectivePriority}</span>
     <span class="panel-badge editable owner-${effectiveOwner}" onclick="openMetaEditor('owner')">👤 ${getOwnerLabel(effectiveOwner)}</span>
@@ -3123,6 +3130,9 @@ function openMetaEditor(field) {
     </select>`;
   } else if (field === 'due') {
     inputHtml = `<input id="metaEditValue" class="meta-edit-input" type="date" value="${due}" />`;
+  } else if (field === 'title') {
+    const title = getTaskTitle(task) || '';
+    inputHtml = `<input id="metaEditValue" class="meta-edit-input" type="text" value="${title.replace(/"/g, '&quot;')}" />`;
   }
 
   document.getElementById('panelMetaEditor').innerHTML = `<div class="meta-edit-wrap">${inputHtml}<button class="task-chat-btn primary" onclick="applyMetaEdit('${field}')">Save</button><button class="task-chat-btn" onclick="cancelMetaEditor()">Cancel</button></div>`;
@@ -3141,22 +3151,28 @@ function applyMetaEdit(field) {
   const task = TASKS.find(t => t.id === taskId);
   if (field === 'status') {
     statusOverrides[taskId] = value; saveStatusOverrides();
-    if (value !== prevStatus) sendRelayEvent('task_status_change', { taskId, title: task ? task.title : taskId, from: prevStatus, to: value });
+    if (value !== prevStatus) sendRelayEvent('task_status_change', { taskId, title: task ? getTaskTitle(task) : taskId, from: prevStatus, to: value });
   }
   if (field === 'priority') {
     const prev = getTaskPriority(task || { id: taskId, priority: null });
     priorityOverrides[taskId] = value; savePriorityOverrides();
-    if (value !== prev) sendRelayEvent('task_priority_change', { taskId, title: task ? task.title : taskId, from: prev, to: value });
+    if (value !== prev) sendRelayEvent('task_priority_change', { taskId, title: task ? getTaskTitle(task) : taskId, from: prev, to: value });
   }
   if (field === 'owner') {
     const prev = getTaskOwner(task || { id: taskId, owner: null });
     ownerOverrides[taskId] = value; saveOwnerOverrides();
-    if (value !== prev) sendRelayEvent('task_owner_change', { taskId, title: task ? task.title : taskId, from: prev, to: value });
+    if (value !== prev) sendRelayEvent('task_owner_change', { taskId, title: task ? getTaskTitle(task) : taskId, from: prev, to: value });
   }
   if (field === 'due') {
     const prev = getTaskDue(task || { id: taskId, due: null });
     dueOverrides[taskId] = value || null; saveDueOverrides();
-    if ((value || null) !== (prev || null)) sendRelayEvent('task_due_change', { taskId, title: task ? task.title : taskId, from: prev || null, to: value || null });
+    if ((value || null) !== (prev || null)) sendRelayEvent('task_due_change', { taskId, title: task ? getTaskTitle(task) : taskId, from: prev || null, to: value || null });
+  }
+  if (field === 'title') {
+    const prev = getTaskTitle(task || { id: taskId, title: '' });
+    const next = (value || '').trim() || prev;
+    titleOverrides[taskId] = next; saveTitleOverrides();
+    if (next !== prev) sendRelayEvent('task_title_change', { taskId, from: prev, to: next });
   }
 
   if (field === 'status' && value === 'done' && prevStatus !== 'done') {
