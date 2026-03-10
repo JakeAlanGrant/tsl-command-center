@@ -2542,7 +2542,7 @@ let dragTaskId = null;
 const RELAY_URL_KEY = 'jag_board_relay_url_v1';
 const RELAY_ENABLED_KEY = 'jag_board_relay_enabled_v1';
 
-function getRelayUrl() { return localStorage.getItem(RELAY_URL_KEY) || `${window.location.protocol}//${window.location.hostname}:8787`; }
+function getRelayUrl() { return localStorage.getItem(RELAY_URL_KEY) || 'http://127.0.0.1:8787'; }
 function setRelayUrl(v) { localStorage.setItem(RELAY_URL_KEY, (v || '').trim()); }
 function relayEnabled() {
   const v = localStorage.getItem(RELAY_ENABLED_KEY);
