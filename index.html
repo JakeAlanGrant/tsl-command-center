@@ -2546,8 +2546,12 @@ function getRelayUrl() {
   const fallback = 'https://relatives-designing-sports-ipaq.trycloudflare.com';
   const saved = localStorage.getItem(RELAY_URL_KEY);
   if (!saved) return fallback;
-  // migrate old quick-tunnel URLs automatically
-  if (saved.includes('awareness-lawsuit-symptoms-phil.trycloudflare.com')) {
+  // migrate stale relay URLs automatically
+  if (
+    saved.includes('127.0.0.1:8787') ||
+    saved.includes('awareness-lawsuit-symptoms-phil.trycloudflare.com') ||
+    saved.includes('localhost:8787')
+  ) {
     localStorage.setItem(RELAY_URL_KEY, fallback);
     return fallback;
   }
