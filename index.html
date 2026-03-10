@@ -2542,7 +2542,17 @@ let dragTaskId = null;
 const RELAY_URL_KEY = 'jag_board_relay_url_v1';
 const RELAY_ENABLED_KEY = 'jag_board_relay_enabled_v1';
 
-function getRelayUrl() { return localStorage.getItem(RELAY_URL_KEY) || 'https://relatives-designing-sports-ipaq.trycloudflare.com'; }
+function getRelayUrl() {
+  const fallback = 'https://relatives-designing-sports-ipaq.trycloudflare.com';
+  const saved = localStorage.getItem(RELAY_URL_KEY);
+  if (!saved) return fallback;
+  // migrate old quick-tunnel URLs automatically
+  if (saved.includes('awareness-lawsuit-symptoms-phil.trycloudflare.com')) {
+    localStorage.setItem(RELAY_URL_KEY, fallback);
+    return fallback;
+  }
+  return saved;
+}
 function setRelayUrl(v) { localStorage.setItem(RELAY_URL_KEY, (v || '').trim()); }
 function relayEnabled() {
   const v = localStorage.getItem(RELAY_ENABLED_KEY);
