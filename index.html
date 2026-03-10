@@ -859,7 +859,7 @@ body {
 .panel-badge.due-badge.overdue { background: rgba(241,107,107,0.1); color: var(--accent-red); }
 .panel-badge.due-badge.today   { background: rgba(245,158,11,0.1);  color: var(--accent-amber); }
 
-.panel-body { flex: 1; overflow-y: auto; padding: 0; }
+.panel-body { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 0; }
 
 .panel-meta-editor {
   padding: 0 22px 12px;
@@ -1099,7 +1099,17 @@ body {
 
 /* Mobile panel */
 @media (max-width: 640px) {
-  .detail-panel { width: 100vw; right: -100vw; }
+  .detail-panel {
+    width: 100vw;
+    right: -100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+  .panel-body {
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(18px + env(safe-area-inset-bottom));
+  }
 }
 
 /* ─── DELIVERABLES ─── */
