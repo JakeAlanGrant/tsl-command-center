@@ -2734,7 +2734,17 @@ function onColumnDrop(event) {
   if (newStatus === 'progress' && prevStatus !== 'progress') {
     const currentFocus = TASKS.filter(t => getTaskStatus(t) === 'progress').length;
     if (currentFocus >= 5) {
-      alert('Focus limit reached: max 5 tasks in Focus. Move one out first.');
+      const choice = (window.prompt('Focus is full (max 5). Move this task to "inprogress" or "queued"?', 'queued') || 'queued').toLowerCase().trim();
+      if (choice === 'inprogress' || choice === 'in progress' || choice === 'i') {
+        statusOverrides[taskId] = 'inprogress';
+      } else {
+        statusOverrides[taskId] = 'queued';
+      }
+      saveStatusOverrides();
+      activityOverrides[taskId] = Date.now();
+      saveActivityOverrides();
+      render();
+      if (currentPanelTaskId === taskId) openPanel(taskId);
       return;
     }
   }
@@ -2759,7 +2769,25 @@ function onColumnDrop(event) {
   }
 }
 
+function enforceFocusLimit() {
+  const focusTasks = TASKS.filter(t => getTaskStatus(t) === 'progress');
+  if (focusTasks.length <= 5) return;
+  focusTasks.sort((a, b) => {
+    const ad = getTaskActivity(a);
+    const bd = getTaskActivity(b);
+    return bd - ad;
+  });
+  const overflow = focusTasks.slice(5);
+  overflow.forEach(t => {
+    statusOverrides[t.id] = 'queued';
+    activityOverrides[t.id] = Date.now();
+  });
+  saveStatusOverrides();
+  saveActivityOverrides();
+}
+
 function render() {
+  enforceFocusLimit();
   const columns = {
     backlog: [], queued: [], progress: [], inprogress: [],
     blocked: [], review: [], done: []
