@@ -798,6 +798,18 @@ body {
   line-height: 1.35;
   color: var(--text-primary);
   letter-spacing: -0.2px;
+  transition: color 0.15s ease;
+}
+.panel-title.editable-title:hover { color: #7fb6ff; }
+.panel-title-input {
+  width: 100%;
+  background: rgba(127,182,255,0.10);
+  border: 1px solid rgba(127,182,255,0.45);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .panel-actions { display: flex; gap: 8px; flex-shrink: 0; }
@@ -2989,7 +3001,8 @@ function openPanel(taskId) {
   panelTitleEl.textContent = effectiveTitle;
   panelTitleEl.title = 'Click to rename task';
   panelTitleEl.style.cursor = 'pointer';
-  panelTitleEl.onclick = () => openMetaEditor('title');
+  panelTitleEl.classList.add('editable-title');
+  panelTitleEl.onclick = () => beginInlineTitleEdit(task.id);
 
   // Meta badges
   const today = new Date().toISOString().split('T')[0];
@@ -3302,6 +3315,56 @@ function openMetaEditor(field) {
 
 function cancelMetaEditor() {
   document.getElementById('panelMetaEditor').innerHTML = '';
+}
+
+function beginInlineTitleEdit(taskId) {
+  const task = TASKS.find(t => t.id === taskId);
+  const panelTitleEl = document.getElementById('panelTitle');
+  if (!task || !panelTitleEl || panelTitleEl.querySelector('input')) return;
+
+  const original = getTaskTitle(task) || '';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'panel-title-input';
+  input.value = original;
+  input.setAttribute('aria-label', 'Edit task title');
+
+  const save = () => {
+    const next = (input.value || '').trim() || original;
+    panelTitleEl.textContent = next;
+    panelTitleEl.onclick = () => beginInlineTitleEdit(task.id);
+    panelTitleEl.classList.add('editable-title');
+    if (next !== original) {
+      titleOverrides[taskId] = next;
+      saveTitleOverrides();
+      sendRelayEvent('task_title_change', { taskId, from: original, to: next });
+      render();
+    }
+  };
+
+  const cancel = () => {
+    panelTitleEl.textContent = original;
+    panelTitleEl.onclick = () => beginInlineTitleEdit(task.id);
+    panelTitleEl.classList.add('editable-title');
+  };
+
+  panelTitleEl.textContent = '';
+  panelTitleEl.classList.remove('editable-title');
+  panelTitleEl.appendChild(input);
+  input.focus();
+  input.select();
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      save();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancel();
+    }
+  });
+
+  input.addEventListener('blur', save);
 }
 
 function applyMetaEdit(field) {
