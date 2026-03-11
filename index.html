@@ -3106,9 +3106,17 @@ function openPanel(taskId) {
     ? `<div class="task-chat-log">${log.map(entry => {
         const sender = String(entry.sender || '').toLowerCase();
         const isYou = sender === 'you' || sender === 'jake' || sender === 'user';
-        const who = isYou ? 'You' : 'Mimir';
+        const isSystem = sender === 'system';
+        const who = isSystem ? '' : (isYou ? 'You' : 'Mimir');
         const whoClass = isYou ? 'chat-who-you' : 'chat-who-mimir';
-        return `<div class="task-chat-log-item"><div class="task-chat-log-time">${entry.ts}</div><div class="task-chat-log-text"><span class="${whoClass}">${who}</span> ${entry.text}</div></div>`;
+        const whoSpan = who ? `<span class="${whoClass}">${who}</span> ` : '';
+        let receipt = '';
+        if (isYou && typeof entry.delivered === 'boolean') {
+          receipt = entry.delivered
+            ? '<span class="chat-receipt sent">✓ sent</span>'
+            : '<span class="chat-receipt failed">⚠️ failed</span>';
+        }
+        return `<div class="task-chat-log-item"><div class="task-chat-log-time">${entry.ts}${receipt}</div><div class="task-chat-log-text">${whoSpan}${entry.text}</div></div>`;
       }).join('')}</div>`
     : '';
   bodyHTML += `
@@ -3510,15 +3518,16 @@ function renderChatEntryHtml(entry) {
   const sender = String(entry.sender || '').toLowerCase();
   const isYou = sender === 'you' || sender === 'jake' || sender === 'user';
   const isSystem = sender === 'system';
-  const who = isSystem ? 'System' : (isYou ? 'You' : 'Mimir');
-  const whoClass = isSystem ? 'chat-who-mimir' : (isYou ? 'chat-who-you' : 'chat-who-mimir');
+  const who = isSystem ? '' : (isYou ? 'You' : 'Mimir');
+  const whoClass = isYou ? 'chat-who-you' : 'chat-who-mimir';
+  const whoSpan = who ? `<span class="${whoClass}">${who}</span> ` : '';
   let receipt = '';
   if (isYou && typeof entry.delivered === 'boolean') {
     receipt = entry.delivered
       ? '<span class="chat-receipt sent">✓ sent</span>'
       : '<span class="chat-receipt failed">⚠️ failed</span>';
   }
-  return `<div class="task-chat-log-item"><div class="task-chat-log-time">${entry.ts}${receipt}</div><div class="task-chat-log-text"><span class="${whoClass}">${who}</span> ${entry.text}</div></div>`;
+  return `<div class="task-chat-log-item"><div class="task-chat-log-time">${entry.ts}${receipt}</div><div class="task-chat-log-text">${whoSpan}${entry.text}</div></div>`;
 }
 
 function ensureTaskChatLogEl() {
