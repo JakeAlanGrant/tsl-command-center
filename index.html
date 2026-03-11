@@ -126,7 +126,7 @@ body {
 .top-tabs { display:flex; gap:8px; margin-left:12px; }
 .top-tab { border:1px solid var(--border); background:var(--bg-card); color:var(--text-secondary); border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; }
 .top-tab.active { border-color: var(--accent-blue); color:#b8d1ff; background: rgba(91,141,248,0.16); }
-.efficiency-dash { padding: 16px; }
+.efficiency-dash { padding: 16px; overflow-y: auto; max-height: calc(100vh - 80px); box-sizing: border-box; }
 .eff-row { display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; margin-bottom:12px; }
 .eff-card { background: var(--bg-card); border:1px solid var(--border-subtle); border-radius:10px; padding:12px; }
 .eff-value { font-size:24px; font-weight:800; }
@@ -4059,6 +4059,29 @@ function renderEfficiencyDashboard() {
   Object.entries(chatMap).forEach(([tid,arr])=>{ if(!Array.isArray(arr)) return; let local=0; const has=arr.length>0; if(has) withChat++; else noChat++; arr.forEach(e=>{ local++; const snd=(e.sender||'').toLowerCase(); const ts=Date.parse(e.createdAt||'') || Date.now(); if(ts<weekAgo) return; if(['you','jake','user'].includes(snd)) jCount++; else if(['mimir'].includes(snd)) mCount++; }); if(local>most){most=local; mostTask=tid;} });
   noChat = tasks.length - withChat;
 
+  // in-progress -> done cycle time
+  const inprogCyc = flowItems.filter(x => x.ct).map(x => {
+    const hist = statusHistory[x.id] || [];
+    const inprogEntry = hist.find(h => h.status === 'inprogress' || h.status === 'progress');
+    if (!inprogEntry) return null;
+    return (x.ct - inprogEntry.ts) / 86400000;
+  }).filter(v => v !== null && v >= 0);
+
+  const wipTasks = tasks.filter(t => ['inprogress','progress'].includes(getEffectiveStatus(t)));
+  const staleWip = wipTasks.filter(t => {
+    const hist = statusHistory[t.id] || [];
+    const last = hist.length ? hist[hist.length-1] : null;
+    if (!last) return false;
+    return (Date.now() - last.ts) / 86400000 >= 3;
+  }).length;
+
+  const staleWipRows = wipTasks.map(t => {
+    const hist = statusHistory[t.id] || [];
+    const last = hist.length ? hist[hist.length-1] : null;
+    const days = last ? Math.floor((Date.now() - last.ts) / 86400000) : 0;
+    return { title: getTaskTitle(t), stage: getEffectiveStatus(t) === 'progress' ? 'Focus' : 'In Progress', days, owner: getOwnerLabel(getTaskOwner(t)), id: t.id };
+  }).filter(r => r.days >= 3).sort((a,b) => b.days - a.days);
+
   const backlogColor = backlogAvg===null ? 'var(--text-secondary)' : (backlogAvg<7 ? '#69d18a' : backlogAvg<14 ? '#f6c56b' : '#ff8a8a');
 
   el.innerHTML = `
@@ -4078,9 +4101,11 @@ function renderEfficiencyDashboard() {
         <div class="eff-stage">Done (${pipeline.done})</div>
       </div></div>
     </div>
-    <div class="eff-row" style="grid-template-columns:repeat(3,1fr)">
+    <div class="eff-row" style="grid-template-columns:repeat(5,1fr)">
       <div class="eff-card"><div class="eff-value">${avg(cyc)}</div><div class="eff-label">Avg days: active → done</div></div>
       <div class="eff-card"><div class="eff-value">${avg(lead)}</div><div class="eff-label">Avg days: backlog → done</div></div>
+      <div class="eff-card"><div class="eff-value">${avg(inprogCyc)}</div><div class="eff-label">Avg days: in progress → done</div></div>
+      <div class="eff-card" style="border-color:${staleWip>0?'#f6c56b55':'var(--border-subtle)'}"><div class="eff-value" style="color:${staleWip>0?'#f6c56b':'var(--text-secondary)'}">${staleWip}</div><div class="eff-label">Stale WIP (3+ days)</div></div>
       <div class="eff-card"><div class="eff-value" style="color:${backlogColor}">${backlogAvg===null?'—':backlogAvg.toFixed(1)}</div><div class="eff-label">Backlog Avg Age (days)</div></div>
     </div>
     <div class="eff-grid-2">
@@ -4088,6 +4113,7 @@ function renderEfficiencyDashboard() {
       <div class="eff-section"><div class="eff-title">Category Table</div><table class="eff-table"><tr><th>Category</th><th>Done</th><th>Avg Cycle</th></tr>${catRows.map(([c,n])=>`<tr><td>${c}</td><td>${n}</td><td>${avg(flowItems.filter(x=> (categoryMap[x.id]||'Uncategorized')===c && x.st && x.ct).map(x=>(x.ct-x.st)/86400000))}</td></tr>`).join('')}</table></div>
     </div>
     <div class="eff-section"><div class="eff-title">Aging Backlog</div><table class="eff-table"><tr><th>Task Title</th><th>Days in Backlog</th><th>Priority</th><th>Owner</th></tr>${ageRows.slice(0,10).map(r=>`<tr><td>${r.title}</td><td style="color:${r.days<7?'#69d18a':r.days<14?'#f6c56b':'#ff8a8a'}">${r.days}</td><td>${r.priority}</td><td>${r.owner}</td></tr>`).join('')}</table>${ageRows.length>10?`<div class="eff-label" style="margin-top:6px">and ${ageRows.length-10} more…</div>`:''}</div>
+    <div class="eff-section"><div class="eff-title">⚠ Stale In Progress (3+ days)</div>${staleWipRows.length===0?'<div class="eff-label">No stale WIP — looking good.</div>':`<table class="eff-table"><tr><th>Task Title</th><th>Stage</th><th>Days Stuck</th><th>Owner</th></tr>${staleWipRows.map(r=>`<tr><td>${r.title}</td><td>${r.stage}</td><td style="color:${r.days>=7?'#ff8a8a':'#f6c56b'}">${r.days}</td><td>${r.owner}</td></tr>`).join('')}</table>`}</div>
     <div class="eff-section"><div class="eff-title">Collaboration</div><table class="eff-table">
       <tr><td>Messages sent by Jake this week</td><td>${jCount}</td></tr>
       <tr><td>Messages sent by Mimir this week</td><td>${mCount}</td></tr>
