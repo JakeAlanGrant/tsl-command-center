@@ -4158,6 +4158,81 @@ function setTaskTyping(show) {
   if (show) scrollTaskChatToBottom();
 }
 
+
+// ── Board write-back (Mimir → board) ──────────────────────────
+let _lastBoardUpdateCheck = Date.now() - 60000; // look back 60s on first poll
+let _boardUpdatePollTimer = null;
+
+function startBoardUpdatePoll() {
+  if (_boardUpdatePollTimer) return;
+  _boardUpdatePollTimer = setInterval(syncBoardUpdates, 3000);
+  syncBoardUpdates();
+}
+
+async function syncBoardUpdates() {
+  if (!relayEnabled()) return;
+  const base = getRelayApiBase();
+  if (!base) return;
+  try {
+    const res = await fetch(`${base}/board-updates?since=${_lastBoardUpdateCheck}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+    if (!items.length) return;
+
+    let changed = false;
+    for (const item of items) {
+      if (!item || !item.taskId || !item.field) continue;
+      const taskId = item.taskId;
+      const field  = item.field;
+      const value  = item.value;
+      const task   = TASKS.find(t => t.id === taskId);
+      _lastBoardUpdateCheck = Math.max(_lastBoardUpdateCheck, item.createdAtMs || 0);
+
+      if (field === 'status') {
+        const prev = getTaskStatus(task || { id: taskId, status: 'queued' });
+        statusOverrides[taskId] = value;
+        saveStatusOverrides();
+        if (value !== prev) recordStatusTransition(taskId, prev, value);
+        if (value === 'done' && prev !== 'done') queueDonePing(taskId);
+        changed = true;
+      } else if (field === 'priority') {
+        priorityOverrides[taskId] = value;
+        savePriorityOverrides();
+        changed = true;
+      } else if (field === 'owner') {
+        ownerOverrides[taskId] = value;
+        saveOwnerOverrides();
+        changed = true;
+      } else if (field === 'due') {
+        dueOverrides[taskId] = value || null;
+        saveDueOverrides();
+        changed = true;
+      } else if (field === 'title') {
+        titleOverrides[taskId] = (value || '').trim();
+        saveTitleOverrides();
+        changed = true;
+      } else if (field === 'category') {
+        if (value) categoryMap[taskId] = value;
+        else delete categoryMap[taskId];
+        saveCategoryMap();
+        changed = true;
+      } else if (field === 'subtask_done' && value && value.subtaskId !== undefined) {
+        const key = subtaskKey(taskId, value.subtaskId);
+        subtaskDoneMap[key] = !!value.done;
+        saveSubtaskDoneMap();
+        changed = true;
+      }
+    }
+    _lastBoardUpdateCheck = Date.now();
+    if (changed) {
+      render();
+      // Re-render open panel if affected
+      if (currentPanelTaskId && items.some(i => i.taskId === currentPanelTaskId)) openPanel(currentPanelTaskId);
+    }
+  } catch (_) {}
+}
+
 function stopTaskReplyPolling() {
   if (taskReplyPollTimer) {
     clearInterval(taskReplyPollTimer);
