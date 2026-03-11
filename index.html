@@ -1594,6 +1594,42 @@ body {
 
 .btn-dlv-copy-full:hover { background: #4a7aee; }
 .btn-dlv-copy-full.copied { background: #16a34a; }
+
+/* Pending delete badge */
+.card-pending-delete { outline: 2px solid #ff4d4d; }
+.card-pending-delete .card-priority { background: #ff4d4d !important; }
+.pending-delete-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: rgba(255,77,77,0.18); border: 1px solid rgba(255,77,77,0.6);
+  color: #ff8a8a; border-radius: 999px; padding: 1px 8px;
+  font-size: 10px; font-weight: 700; margin-left: 6px;
+}
+/* Delete-request panel banner */
+.delete-request-banner {
+  background: rgba(255,60,60,0.12); border: 1px solid rgba(255,60,60,0.45);
+  border-radius: 8px; padding: 10px 14px; margin-bottom: 12px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.delete-request-banner-text { color: #ff8a8a; font-size: 13px; flex: 1; }
+.delete-confirm-btn {
+  background: #c0392b; border: none; color: #fff;
+  border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+.delete-confirm-btn:hover { background: #e74c3c; }
+.delete-dismiss-btn {
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text-secondary); border-radius: 6px;
+  padding: 5px 10px; font-size: 12px; cursor: pointer;
+}
+/* Clickable chat badge on card */
+.card-chat-badge {
+  cursor: pointer; margin-left: 5px;
+  background: rgba(126,231,255,0.18); border: 1px solid rgba(126,231,255,0.45);
+  color: #7ee7ff; border-radius: 999px; padding: 0px 7px;
+  font-size: 10px; font-weight: 700; vertical-align: middle;
+  display: inline-flex; align-items: center;
+}
+.card-chat-badge:hover { background: rgba(126,231,255,0.32); }
 </style>
 </head>
 <body>
@@ -2962,6 +2998,20 @@ const OWNER_OVERRIDES_KEY = 'jag_board_owner_overrides_v1';
 const DUE_OVERRIDES_KEY = 'jag_board_due_overrides_v1';
 const TITLE_OVERRIDES_KEY = 'jag_board_title_overrides_v1';
 const ACTIVITY_OVERRIDES_KEY = 'jag_board_activity_overrides_v1';
+
+const DELETE_REQ_KEY = 'jag_board_delete_requested_v1';
+let deleteRequests = {};
+try { deleteRequests = JSON.parse(localStorage.getItem(DELETE_REQ_KEY) || '{}'); } catch (_) { deleteRequests = {}; }
+function saveDeleteRequests() { localStorage.setItem(DELETE_REQ_KEY, JSON.stringify(deleteRequests)); }
+function getDeleteRequest(taskId) { return deleteRequests[taskId] || null; }
+function setDeleteRequest(taskId, requestedBy) {
+  deleteRequests[taskId] = { requestedBy, ts: Date.now() };
+  saveDeleteRequests();
+}
+function clearDeleteRequest(taskId) {
+  delete deleteRequests[taskId];
+  saveDeleteRequests();
+}
 const DELETED_TASKS_KEY = 'jag_board_deleted_tasks_v1';
 const STATUS_HISTORY_KEY = 'jag_board_status_history_v1';
 const COMPLETED_AT_KEY = 'jag_board_completed_at_v1';
@@ -3079,12 +3129,30 @@ function saveDeletedTasks() { localStorage.setItem(DELETED_TASKS_KEY, JSON.strin
 function isTaskDeleted(taskId) { return deletedTaskIds.includes(taskId); }
 function confirmHideTask(taskId, ev) {
   if (ev) { ev.preventDefault(); ev.stopPropagation(); }
-  if (!confirm('Hide this task? (can be restored)')) return;
+  // Flag for deletion instead of immediate delete
+  setDeleteRequest(taskId, 'jake');
+  sendRelayEvent('task_delete_requested', {
+    taskId,
+    title: (() => { const t = TASKS.find(tt => tt.id === taskId); return t ? getTaskTitle(t) : taskId; })(),
+    requestedBy: 'jake'
+  });
+  render();
+  // If panel is open for this task, re-render it to show banner
+  if (currentPanelTaskId === taskId) openPanel(taskId);
+}
+function executeDeleteTask(taskId) {
   if (!deletedTaskIds.includes(taskId)) {
     deletedTaskIds.push(taskId);
     saveDeletedTasks();
-    render();
   }
+  clearDeleteRequest(taskId);
+  if (currentPanelTaskId === taskId) closePanel();
+  render();
+}
+function dismissDeleteRequest(taskId) {
+  clearDeleteRequest(taskId);
+  render();
+  if (currentPanelTaskId === taskId) openPanel(taskId);
 }
 function restoreTask(taskId, ev) {
   if (ev) { ev.preventDefault(); ev.stopPropagation(); }
@@ -3209,18 +3277,21 @@ function createCard(task) {
                      effectiveOwner === 'sales-manager' ? 'sales-manager' :
                      effectiveOwner === 'recruiting-manager' ? 'recruiting-manager' : '';
 
+  const pendingDelete = getDeleteRequest(task.id);
   const actionBtn = deleted
     ? `<button class="card-restore-btn" onclick="restoreTask('${task.id}', event)" title="Restore task">↩</button>`
-    : `<button class="card-delete-btn" onclick="confirmHideTask('${task.id}', event)" title="Hide task">🗑</button>`;
+    : pendingDelete
+      ? `<button class="card-delete-btn" onclick="event.preventDefault();event.stopPropagation();dismissDeleteRequest('${task.id}')" title="Dismiss delete request" style="color:#ff8a8a">🗑</button>`
+      : `<button class="card-delete-btn" onclick="confirmHideTask('${task.id}', event)" title="Flag for deletion">🗑</button>`;
 
   return `
-    <div class="card ${deleted ? 'card-hidden-task' : ''}" data-owner="${effectiveOwner}" data-priority="${effectivePriority}" data-task-id="${task.id}" draggable="true" onclick="handleCardClick(event, '${task.id}')" ondragstart="onCardDragStart(event, '${task.id}')" ondragend="onCardDragEnd(event)">
+    <div class="card ${deleted ? 'card-hidden-task' : ''} ${pendingDelete ? 'card-pending-delete' : ''}" data-owner="${effectiveOwner}" data-priority="${effectivePriority}" data-task-id="${task.id}" draggable="true" onclick="handleCardClick(event, '${task.id}')" ondragstart="onCardDragStart(event, '${task.id}')" ondragend="onCardDragEnd(event)">
       ${actionBtn}
       <div class="card-priority ${effectivePriority}"></div>
       <div class="card-top">
         <div class="card-title">${getTaskTitle(task)}</div>
         ${completedAtMap[task.id] ? `<div class="card-completed">✓ Completed ${fmtShortDate(completedAtMap[task.id])}</div>` : ''}
-        <div class="card-id">${task.id}${hasUnreadChat ? '<span class="card-chat-badge">💬 new</span>' : ''}</div>
+        <div class="card-id">${task.id}${hasUnreadChat ? `<span class="card-chat-badge" onclick="event.preventDefault();event.stopPropagation();openPanelWithChat('${task.id}')">💬 new</span>` : ''}${pendingDelete ? '<span class="pending-delete-badge">🗑 PENDING DELETE</span>' : ''}</div>
       </div>
       ${task.blocker ? `<div class="card-blocker">${task.blocker}</div>` : ''}
       <div class="card-meta">
@@ -3484,6 +3555,16 @@ function openPanel(taskId) {
 
   // Body
   let bodyHTML = '';
+  // Delete request banner
+  const _delReq = getDeleteRequest(task.id);
+  if (_delReq) {
+    const _who = _delReq.requestedBy === 'mimir' ? 'Mimir has requested this task be deleted' : 'You flagged this task for deletion';
+    bodyHTML += `<div class="delete-request-banner">
+      <div class="delete-request-banner-text">🗑 ${_who}</div>
+      <button class="delete-confirm-btn" onclick="executeDeleteTask('${task.id}')">Confirm Delete</button>
+      <button class="delete-dismiss-btn" onclick="dismissDeleteRequest('${task.id}')">Dismiss</button>
+    </div>`;
+  }
 
   // Description
   if (task.description) {
@@ -4071,6 +4152,39 @@ function stopTaskReplyPolling() {
   }
 }
 
+
+let _deleteReqPollTimer = null;
+function startDeleteRequestPoll() {
+  if (_deleteReqPollTimer) return;
+  _deleteReqPollTimer = setInterval(pollRelayDeleteRequests, 15000);
+  pollRelayDeleteRequests();
+}
+async function pollRelayDeleteRequests() {
+  if (!relayEnabled()) return;
+  const base = getRelayApiBase();
+  if (!base) return;
+  try {
+    const res = await fetch(`${base}/events?limit=50`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const items = Array.isArray(data.items) ? data.items : (Array.isArray(data) ? data : []);
+    let changed = false;
+    for (const item of items) {
+      if (item.eventType === 'task_delete_requested' && item.payload && item.payload.taskId) {
+        const tid = item.payload.taskId;
+        const req = getDeleteRequest(tid);
+        // Only apply if no existing request and requestedBy is mimir
+        const rb = (item.payload.requestedBy || 'mimir').toLowerCase();
+        if (!req && rb === 'mimir') {
+          setDeleteRequest(tid, 'mimir');
+          changed = true;
+        }
+      }
+    }
+    if (changed) render();
+  } catch (_) {}
+}
+
 function startTaskReplyPolling(taskId) {
   stopTaskReplyPolling();
   syncTaskReplies(taskId);
@@ -4191,6 +4305,11 @@ function checkHashRoute() {
   if (routeTask && TASKS.find(t => t.id === routeTask)) {
     openPanel(routeTask);
   }
+}
+
+function openPanelWithChat(taskId) {
+  openPanel(taskId);
+  requestAnimationFrame(() => openChatWidget(taskId));
 }
 
 function openTaskFromDashboard(taskId) {
