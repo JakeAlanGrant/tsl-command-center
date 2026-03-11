@@ -4193,6 +4193,12 @@ function checkHashRoute() {
   }
 }
 
+function openTaskFromDashboard(taskId) {
+  switchTopTab('board');
+  // Defer openPanel so render() triggered by switchTopTab finishes first
+  requestAnimationFrame(() => openPanel(taskId));
+}
+
 function clearCategoryFilter() {
   activeCategoryFilter = null;
   renderEfficiencyDashboard();
@@ -4360,8 +4366,8 @@ function renderEfficiencyDashboard() {
       <div class="eff-section"><div class="eff-title">Category Breakdown (Completed This Month)</div><canvas id="catChart" height="120"></canvas></div>
       <div class="eff-section"><div class="eff-title">Category Table</div><table class="eff-table"><tr><th>Category</th><th>Done</th><th>Avg Cycle</th></tr>${catRows.map(([c,n])=>`<tr style="cursor:pointer;${catFilter===c?'background:rgba(126,231,255,0.1)':''}" onclick="activeCategoryFilter=activeCategoryFilter==='${c}'?null:'${c}';renderEfficiencyDashboard()"><td>${catFilter===c?'▸ ':''}<strong>${c}</strong></td><td>${n}</td><td>${avg(flowItems.filter(x=> (categoryMap[x.id]||'Uncategorized')===c && x.st && x.ct).map(x=>(x.ct-x.st)/86400000))}</td></tr>`).join('')}</table></div>
     </div>
-    <div class="eff-section"><div class="eff-title">Aging Backlog</div><table class="eff-table"><tr><th>Task Title</th><th>Days in Backlog</th><th>Priority</th><th>Owner</th></tr>${ageRows.slice(0,10).map(r=>`<tr class="eff-row-clickable" onclick="switchTopTab('board');openPanel('${r.id}')"><td>${r.title}</td><td style="color:${r.days<7?'#69d18a':r.days<14?'#f6c56b':'#ff8a8a'}">${r.days}</td><td>${r.priority}</td><td>${r.owner}</td></tr>`).join('')}</table>${ageRows.length>10?`<div class="eff-label" style="margin-top:6px">and ${ageRows.length-10} more…</div>`:''}</div>
-    <div class="eff-section"><div class="eff-title">⚠ Stale In Progress (3+ days)</div>${staleWipRows.length===0?'<div class="eff-label">No stale WIP — looking good.</div>':`<table class="eff-table"><tr><th>Task Title</th><th>Stage</th><th>Days Stuck</th><th>Owner</th></tr>${staleWipRows.map(r=>`<tr class="eff-row-clickable" onclick="switchTopTab('board');openPanel('${r.id}')"><td>${r.title}</td><td>${r.stage}</td><td style="color:${r.days>=7?'#ff8a8a':'#f6c56b'}">${r.days}</td><td>${r.owner}</td></tr>`).join('')}</table>`}</div>
+    <div class="eff-section"><div class="eff-title">Aging Backlog</div><table class="eff-table"><tr><th>Task Title</th><th>Days in Backlog</th><th>Priority</th><th>Owner</th></tr>${ageRows.slice(0,10).map(r=>`<tr class="eff-row-clickable" onclick="openTaskFromDashboard('${r.id}')"><td>${r.title}</td><td style="color:${r.days<7?'#69d18a':r.days<14?'#f6c56b':'#ff8a8a'}">${r.days}</td><td>${r.priority}</td><td>${r.owner}</td></tr>`).join('')}</table>${ageRows.length>10?`<div class="eff-label" style="margin-top:6px">and ${ageRows.length-10} more…</div>`:''}</div>
+    <div class="eff-section"><div class="eff-title">⚠ Stale In Progress (3+ days)</div>${staleWipRows.length===0?'<div class="eff-label">No stale WIP — looking good.</div>':`<table class="eff-table"><tr><th>Task Title</th><th>Stage</th><th>Days Stuck</th><th>Owner</th></tr>${staleWipRows.map(r=>`<tr class="eff-row-clickable" onclick="openTaskFromDashboard('${r.id}')"><td>${r.title}</td><td>${r.stage}</td><td style="color:${r.days>=7?'#ff8a8a':'#f6c56b'}">${r.days}</td><td>${r.owner}</td></tr>`).join('')}</table>`}</div>
     <div class="eff-section"><div class="eff-title">Collaboration</div><table class="eff-table">
       <tr><td>Messages sent by Jake this week</td><td>${jCount}</td></tr>
       <tr><td>Messages sent by Mimir this week</td><td>${mCount}</td></tr>
