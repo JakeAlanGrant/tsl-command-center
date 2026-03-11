@@ -1183,8 +1183,10 @@ body {
   font-size: 12px;
 }
 .task-chat-typing.show { display: flex; }
+/* chat widget replaces old inline popup — see #chatWidget */
 .chat-launch-wrap { margin-top: 12px; }
 .chat-launch-btn {
+  position: relative;
   border: 1px solid var(--border);
   background: var(--bg-card);
   color: var(--text-primary);
@@ -1193,8 +1195,12 @@ body {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  transition: border-color 0.15s;
 }
+.chat-launch-btn:hover { border-color: var(--accent-blue); }
+.chat-launch-btn.chat-widget-open { border-color: #7ee7ff; color: #7ee7ff; }
 .chat-unread-badge {
+  display: inline-block;
   margin-left: 8px;
   background: rgba(126,231,255,0.25);
   border: 1px solid rgba(126,231,255,0.55);
@@ -1202,23 +1208,115 @@ body {
   border-radius: 999px;
   padding: 0 6px;
   font-size: 10px;
+  vertical-align: middle;
 }
-.task-chat-popup {
+
+/* Floating chat widget */
+#chatWidget {
   display: none;
-  position: sticky;
-  bottom: 10px;
-  z-index: 5;
-  margin-top: 10px;
-  border: 1px solid var(--border);
+  position: fixed;
+  right: 440px;
+  bottom: 24px;
+  width: 340px;
+  height: 420px;
+  z-index: 99999;
   background: #0e111a;
-  border-radius: 10px;
-  padding: 10px;
-  max-height: 350px;
-  box-shadow: 0 12px 24px rgba(0,0,0,0.35);
+  border: 1px solid rgba(91,141,248,0.4);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.6);
+  flex-direction: column;
+  overflow: hidden;
 }
-.task-chat-popup.open { display: block; }
-.task-chat-popup-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
-.task-chat-close { border:1px solid var(--border); background:transparent; color:var(--text-secondary); border-radius:6px; padding:2px 8px; cursor:pointer; }
+#chatWidget.open { display: flex; }
+.chat-widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: #111422;
+  border-bottom: 1px solid rgba(91,141,248,0.2);
+  cursor: grab;
+  user-select: none;
+  flex-shrink: 0;
+}
+.chat-widget-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #b8d1ff;
+}
+.chat-widget-task-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+.chat-widget-close {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.chat-widget-close:hover { color: var(--text-primary); border-color: var(--border-hover); }
+.chat-widget-log {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.chat-widget-log::-webkit-scrollbar { width: 3px; }
+.chat-widget-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.chat-widget-typing {
+  display: none;
+  padding: 0 12px 4px;
+  align-items: center;
+  gap: 6px;
+  color: #7ee7ff;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.chat-widget-typing.show { display: flex; }
+.chat-widget-footer {
+  flex-shrink: 0;
+  border-top: 1px solid rgba(91,141,248,0.15);
+  padding: 8px;
+  display: flex;
+  gap: 6px;
+  align-items: flex-end;
+}
+.chat-widget-textarea {
+  flex: 1;
+  background: #0a0c14;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-size: 12px;
+  resize: none;
+  max-height: 80px;
+  min-height: 34px;
+  font-family: inherit;
+}
+.chat-widget-send {
+  background: #2d6cdf;
+  border: none;
+  color: #fff;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.chat-widget-send:hover { background: #3f7ef3; }
 .task-chat-typing-label {
   color: #7ee7ff;
   font-weight: 700;
@@ -1707,6 +1805,28 @@ body {
   <div class="panel-body" id="panelBody"></div>
 </div>
 
+
+<!-- ─── FLOATING CHAT WIDGET ─── -->
+<div id="chatWidget">
+  <div class="chat-widget-header" id="chatWidgetHeader">
+    <div>
+      <div class="chat-widget-title">💬 Mimir</div>
+      <div class="chat-widget-task-label" id="chatWidgetTaskLabel"></div>
+    </div>
+    <button class="chat-widget-close" onclick="closeChatWidget()" title="Close">✕</button>
+  </div>
+  <div class="chat-widget-log" id="chatWidgetLog"></div>
+  <div class="chat-widget-typing" id="taskChatTyping">
+    <span style="font-weight:700">Mimir</span>
+    <div class="typing-dots"><span></span><span></span><span></span></div>
+  </div>
+  <div class="chat-widget-footer">
+    <textarea class="chat-widget-textarea" id="taskChatInput" placeholder="Message Mimir…" rows="1"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTaskChat(currentChatWidgetTaskId);}"
+      oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,80)+'px'"></textarea>
+    <button class="chat-widget-send" onclick="sendTaskChat(currentChatWidgetTaskId)">Send</button>
+  </div>
+</div>
 </div>
 <script>
 // ══════════════════════════════════════════════════════════════
@@ -2816,6 +2936,7 @@ let currentPanelTaskId = null;
 let dragTaskId = null;
 let taskReplyPollTimer = null;
 const chatPopupState = {};
+let currentChatWidgetTaskId = null;
 
 const RELAY_URL_KEY = 'jag_board_relay_url_v1';
 const RELAY_ENABLED_KEY = 'jag_board_relay_enabled_v1';
@@ -3412,45 +3533,11 @@ function openPanel(taskId) {
 
   // Task Chat (V2 Popup)
   const savedNote = getTaskChatNote(task.id);
-  const relayConfigured = !!(localStorage.getItem(RELAY_URL_KEY) || '').trim();
-  const relayWarning = relayConfigured ? '' : `<div class="relay-warning">⚠ Relay URL not configured. Open DevTools and run: localStorage.setItem('jag_board_relay_url_v1', 'https://targeted-cancer-progress-accordance.trycloudflare.com')</div>`;
-  const log = getTaskChatLog(task.id).filter(entry => !String(entry.text || '').toLowerCase().includes('relay delivery'));
-  const logHtml = log.length
-    ? `<div class="task-chat-log">${log.map(entry => {
-        const sender = String(entry.sender || '').toLowerCase();
-        const isYou = sender === 'you' || sender === 'jake' || sender === 'user';
-        const isSystem = sender === 'system';
-        const who = isSystem ? '' : (isYou ? 'You' : 'Mimir');
-        const whoClass = isYou ? 'chat-who-you' : 'chat-who-mimir';
-        const whoSpan = who ? `<span class="${whoClass}">${who}</span> ` : '';
-        let receipt = '';
-        if (isYou && typeof entry.delivered === 'boolean') {
-          receipt = entry.delivered
-            ? '<span class="chat-receipt sent">✓ sent</span>'
-            : '<span class="chat-receipt failed">⚠️ failed</span>';
-        }
-        return `<div class="task-chat-log-item"><div class="task-chat-log-time">${entry.ts}${receipt}</div><div class="task-chat-log-text">${whoSpan}${entry.text}</div></div>`;
-      }).join('')}</div>`
-    : '';
-  const chatOpen = !!chatPopupState[task.id];
   const unreadBadge = getTaskChatUnread(task.id) ? '<span class="chat-unread-badge">new</span>' : '';
+  const isWidgetOpenForThis = currentChatWidgetTaskId === task.id && document.getElementById('chatWidget')?.classList.contains('open');
   bodyHTML += `
     <div class="chat-launch-wrap">
-      <button class="chat-launch-btn" onclick="toggleTaskChatPopup('${task.id}')">💬 Chat with Mimir ${unreadBadge}</button>
-      <div class="task-chat-popup ${chatOpen ? 'open' : ''}" id="taskChatPopup">
-        <div class="task-chat-popup-head"><div class="panel-section-title" style="margin:0">Chat with Mimir</div><button class="task-chat-close" onclick="toggleTaskChatPopup('${task.id}', false)">Close</button></div>
-      <textarea class="task-chat-box" id="taskChatInput" placeholder="Type an update, blocker, or request for this task...">${savedNote || ''}</textarea>
-      <div class="task-chat-actions">
-        <button class="task-chat-btn primary" onclick="sendTaskChat('${task.id}')">Send</button>
-        <button class="task-chat-btn" onclick="markTaskChatAddressed('${task.id}')">Mark Addressed</button>
-        <button class="task-chat-btn" onclick="saveTaskChat('${task.id}')">Save Draft</button>
-        <button class="task-chat-btn" onclick="clearTaskChat('${task.id}')">Clear</button>
-      </div>
-      <div class="task-chat-meta">Replies auto-sync while this panel is open and appear inline below your message.</div>
-      ${relayWarning}
-      ${logHtml}
-      <div class="task-chat-typing" id="taskChatTyping"><span class="task-chat-typing-label">Mimir</span><div class="typing-dots"><span></span><span></span><span></span></div></div>
-      </div>
+      <button class="chat-launch-btn ${isWidgetOpenForThis ? 'chat-widget-open' : ''}" id="chatLaunchBtn-${task.id}" onclick="toggleChatWidget('${task.id}')">💬 Chat with Mimir ${unreadBadge}</button>
     </div>`;
 
   // Docs
@@ -3496,6 +3583,7 @@ function openPanel(taskId) {
 function closePanel() {
   stopTaskReplyPolling();
   currentPanelTaskId = null;
+  closeChatWidget();
   document.getElementById('panelOverlay').classList.remove('open');
   document.getElementById('detailPanel').classList.remove('open');
   history.replaceState(null, '', window.location.pathname);
@@ -3597,11 +3685,81 @@ function saveTaskChat(taskId) {
   localStorage.setItem('taskChatNotes', JSON.stringify(map));
 }
 
-function toggleTaskChatPopup(taskId, forceOpen = null) {
-  const next = forceOpen === null ? !chatPopupState[taskId] : !!forceOpen;
-  chatPopupState[taskId] = next;
-  const popup = document.getElementById('taskChatPopup');
-  if (popup) popup.classList.toggle('open', next);
+function openChatWidget(taskId) {
+  const widget = document.getElementById('chatWidget');
+  if (!widget) return;
+  currentChatWidgetTaskId = taskId;
+  const task = TASKS.find(t => t.id === taskId);
+  const label = document.getElementById('chatWidgetTaskLabel');
+  if (label) label.textContent = task ? getTaskTitle(task) : taskId;
+
+  // Clear unread
+  const unreadMap = getTaskChatUnreadMap();
+  delete unreadMap[taskId];
+  localStorage.setItem('taskChatUnread', JSON.stringify(unreadMap));
+
+  // Populate log
+  const logEl = document.getElementById('chatWidgetLog');
+  if (logEl) {
+    const log = getTaskChatLog(taskId).filter(e => !String(e.text||'').toLowerCase().includes('relay delivery'));
+    logEl.innerHTML = log.map(renderChatEntryHtml).join('');
+  }
+
+  // Restore draft
+  const input = document.getElementById('taskChatInput');
+  if (input) { input.value = getTaskChatNote(taskId) || ''; input.style.height = 'auto'; }
+
+  // Mark button active
+  document.querySelectorAll('.chat-launch-btn').forEach(b => b.classList.remove('chat-widget-open'));
+  const btn = document.getElementById('chatLaunchBtn-' + taskId);
+  if (btn) btn.classList.add('chat-widget-open');
+
+  widget.classList.add('open');
+  scrollTaskChatToBottom();
+  startTaskReplyPolling(taskId);
+  makeChatWidgetDraggable();
+}
+
+function closeChatWidget() {
+  const widget = document.getElementById('chatWidget');
+  if (widget) widget.classList.remove('open');
+  document.querySelectorAll('.chat-launch-btn').forEach(b => b.classList.remove('chat-widget-open'));
+  stopTaskReplyPolling();
+  currentChatWidgetTaskId = null;
+}
+
+function toggleChatWidget(taskId) {
+  const widget = document.getElementById('chatWidget');
+  const isOpen = widget?.classList.contains('open');
+  if (isOpen && currentChatWidgetTaskId === taskId) { closeChatWidget(); return; }
+  openChatWidget(taskId);
+}
+
+function toggleTaskChatPopup(taskId) { toggleChatWidget(taskId); }
+
+function makeChatWidgetDraggable() {
+  const widget = document.getElementById('chatWidget');
+  const header = document.getElementById('chatWidgetHeader');
+  if (!widget || !header || header._draggable) return;
+  header._draggable = true;
+  let startX, startY, startL, startB;
+  header.addEventListener('mousedown', (e) => {
+    if (e.target.classList.contains('chat-widget-close')) return;
+    startX = e.clientX; startY = e.clientY;
+    const rect = widget.getBoundingClientRect();
+    startL = rect.left;
+    startB = window.innerHeight - rect.bottom;
+    widget.style.right = 'auto';
+    widget.style.bottom = startB + 'px';
+    widget.style.left = startL + 'px';
+    const onMove = (me) => {
+      widget.style.left = (startL + me.clientX - startX) + 'px';
+      widget.style.bottom = (startB - me.clientY + startY) + 'px';
+    };
+    const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
 }
 
 function clearTaskChat(taskId) {
@@ -3655,6 +3813,7 @@ async function sendTaskChat(taskId) {
   setTaskTyping(ok);
 
   input.value = '';
+  input.style.height = 'auto';
   saveTaskChat(taskId);
   render();
 }
@@ -3865,7 +4024,7 @@ function getRelayApiBase() {
 
 
 function scrollTaskChatToBottom() {
-  const logEl = document.querySelector('.task-chat-log');
+  const logEl = document.getElementById('chatWidgetLog');
   if (logEl) logEl.scrollTop = logEl.scrollHeight;
 }
 
@@ -3886,15 +4045,7 @@ function renderChatEntryHtml(entry) {
 }
 
 function ensureTaskChatLogEl() {
-  const panelSection = document.querySelector('#panelBody .panel-section .task-chat-box')?.closest('.panel-section');
-  if (!panelSection) return null;
-  let logEl = panelSection.querySelector('.task-chat-log');
-  if (!logEl) {
-    logEl = document.createElement('div');
-    logEl.className = 'task-chat-log';
-    panelSection.appendChild(logEl);
-  }
-  return logEl;
+  return document.getElementById('chatWidgetLog');
 }
 
 function appendChatEntryToDom(entry) {
@@ -3908,6 +4059,7 @@ function setTaskTyping(show) {
   const el = document.getElementById('taskChatTyping');
   if (!el) return;
   el.classList.toggle('show', !!show);
+  if (show) scrollTaskChatToBottom();
 }
 
 function stopTaskReplyPolling() {
@@ -3961,11 +4113,13 @@ async function syncTaskReplies(taskId, forceOpen = false) {
       localStorage.setItem('taskChatUnread', JSON.stringify(unreadMap));
 
       if (forceOpen || currentPanelTaskId === taskId) {
-        chatPopupState[taskId] = true;
         setTaskTyping(false);
         newEntries.forEach(appendChatEntryToDom);
-        const popup = document.getElementById('taskChatPopup');
-        if (popup) popup.classList.add('open');
+        // Auto-open widget for this task if not already open
+        const widget = document.getElementById('chatWidget');
+        if (widget && !widget.classList.contains('open')) {
+          openChatWidget(taskId);
+        }
       }
 
       render();
