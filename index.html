@@ -122,6 +122,25 @@ body {
 }
 
 /* ─── METRICS BAR ─── */
+
+.top-tabs { display:flex; gap:8px; margin-left:12px; }
+.top-tab { border:1px solid var(--border); background:var(--bg-card); color:var(--text-secondary); border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; cursor:pointer; }
+.top-tab.active { border-color: var(--accent-blue); color:#b8d1ff; background: rgba(91,141,248,0.16); }
+.efficiency-dash { padding: 16px; }
+.eff-row { display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; margin-bottom:12px; }
+.eff-card { background: var(--bg-card); border:1px solid var(--border-subtle); border-radius:10px; padding:12px; }
+.eff-value { font-size:24px; font-weight:800; }
+.eff-label { font-size:11px; color:var(--text-muted); margin-top:4px; }
+.eff-grid-2 { display:grid; grid-template-columns: 1.1fr .9fr; gap:12px; margin-bottom:12px; }
+.eff-section { background: var(--bg-card); border:1px solid var(--border-subtle); border-radius:10px; padding:12px; margin-bottom:12px; }
+.eff-title { font-size:12px; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:8px; }
+.eff-pipeline { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.eff-stage { padding:8px 10px; border-radius:8px; border:1px solid var(--border); background:#111522; }
+.eff-arrow { color: var(--text-muted); }
+.eff-table { width:100%; border-collapse:collapse; font-size:12px; }
+.eff-table td,.eff-table th{ border-bottom:1px solid var(--border-subtle); padding:6px; text-align:left;}
+.eff-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.eff-refresh { border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); border-radius:8px; padding:5px 9px; cursor:pointer; font-size:12px; }
 .metrics-bar {
   display: flex;
   gap: 12px;
@@ -413,6 +432,7 @@ body {
   overflow: visible;
 }
 
+.card-completed { font-size:10px; color:#8de6a4; margin-top:3px; }
 .card-id {
   font-family: 'Space Mono', monospace;
   font-size: 9px;
@@ -716,7 +736,8 @@ body {
     white-space: normal;
     padding-left: 0;
   }
-  .card-id {
+  .card-completed { font-size:10px; color:#8de6a4; margin-top:3px; }
+.card-id {
     font-size: 10px;
     margin-left: 0;
     margin-top: 0;
@@ -1489,6 +1510,10 @@ body {
 <div class="header">
   <div class="header-left">
     <div class="logo">JAG<span> // Command Center</span></div>
+    <div class="top-tabs">
+      <button class="top-tab active" id="tabBoardBtn" onclick="switchTopTab('board')">Task Board</button>
+      <button class="top-tab" id="tabEfficiencyBtn" onclick="switchTopTab('efficiency')">Efficiency</button>
+    </div>
   </div>
   <div class="header-stats">
     <div class="stat">
@@ -1630,6 +1655,8 @@ body {
   </div>
 
 </div>
+
+<div class="efficiency-dash" id="efficiencyDash" style="display:none"></div>
 
 <!-- ─── LEGEND ─── -->
 <div class="legend">
@@ -2811,9 +2838,25 @@ const DUE_OVERRIDES_KEY = 'jag_board_due_overrides_v1';
 const TITLE_OVERRIDES_KEY = 'jag_board_title_overrides_v1';
 const ACTIVITY_OVERRIDES_KEY = 'jag_board_activity_overrides_v1';
 const DELETED_TASKS_KEY = 'jag_board_deleted_tasks_v1';
+const STATUS_HISTORY_KEY = 'jag_board_status_history_v1';
+const COMPLETED_AT_KEY = 'jag_board_completed_at_v1';
+const STARTED_AT_KEY = 'jag_board_started_at_v1';
+const CATEGORY_KEY = 'jag_board_category_v1';
 let deletedTaskIds = [];
 let showHiddenTasks = false;
 try { deletedTaskIds = JSON.parse(localStorage.getItem(DELETED_TASKS_KEY) || '[]'); if (!Array.isArray(deletedTaskIds)) deletedTaskIds = []; } catch (_) { deletedTaskIds = []; }
+let statusHistory = {};
+let completedAtMap = {};
+let startedAtMap = {};
+let categoryMap = {};
+try { statusHistory = JSON.parse(localStorage.getItem(STATUS_HISTORY_KEY) || '{}'); } catch (_) { statusHistory = {}; }
+try { completedAtMap = JSON.parse(localStorage.getItem(COMPLETED_AT_KEY) || '{}'); } catch (_) { completedAtMap = {}; }
+try { startedAtMap = JSON.parse(localStorage.getItem(STARTED_AT_KEY) || '{}'); } catch (_) { startedAtMap = {}; }
+try { categoryMap = JSON.parse(localStorage.getItem(CATEGORY_KEY) || '{}'); } catch (_) { categoryMap = {}; }
+let activeTopTab = 'board';
+let chartJsLoaded = false;
+let velocityChart = null;
+let categoryChart = null;
 
 let statusOverrides = {};
 let priorityOverrides = {};
@@ -2880,6 +2923,32 @@ function getSubtaskDone(taskId, subtask) {
   if (key in subtaskDoneMap) return !!subtaskDoneMap[key];
   return !!subtask.done;
 }
+
+function saveStatusHistory() { localStorage.setItem(STATUS_HISTORY_KEY, JSON.stringify(statusHistory)); }
+function saveCompletedAt() { localStorage.setItem(COMPLETED_AT_KEY, JSON.stringify(completedAtMap)); }
+function saveStartedAt() { localStorage.setItem(STARTED_AT_KEY, JSON.stringify(startedAtMap)); }
+function saveCategoryMap() { localStorage.setItem(CATEGORY_KEY, JSON.stringify(categoryMap)); }
+function getTaskCategory(taskId) { return categoryMap[taskId] || null; }
+function getTaskCategoryLabel(taskId) { return categoryMap[taskId] || '— Uncategorized'; }
+function recordStatusTransition(taskId, fromStatus, toStatus) {
+  if (!toStatus || fromStatus === toStatus) return;
+  if (!statusHistory[taskId]) statusHistory[taskId] = [];
+  statusHistory[taskId].push({ status: toStatus, ts: Date.now() });
+  saveStatusHistory();
+  if (toStatus === 'done') {
+    completedAtMap[taskId] = Date.now();
+    saveCompletedAt();
+  } else if (fromStatus === 'done' && toStatus !== 'done') {
+    delete completedAtMap[taskId];
+    saveCompletedAt();
+  }
+  if (!startedAtMap[taskId] && fromStatus === 'backlog' && toStatus !== 'backlog') {
+    startedAtMap[taskId] = Date.now();
+    saveStartedAt();
+  }
+}
+function fmtShortDate(ts){ if(!ts) return ''; const d=new Date(ts); return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});}
+function fmtFullDate(ts){ if(!ts) return ''; const d=new Date(ts); return d.toLocaleString('en-US',{month:'long',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'});}
 
 function getTaskFromRoute() {
   const params = new URLSearchParams(window.location.search);
@@ -2959,6 +3028,7 @@ function createCard(task) {
       <div class="card-priority ${effectivePriority}"></div>
       <div class="card-top">
         <div class="card-title">${getTaskTitle(task)}</div>
+        ${completedAtMap[task.id] ? `<div class="card-completed">✓ Completed ${fmtShortDate(completedAtMap[task.id])}</div>` : ''}
         <div class="card-id">${task.id}${hasUnreadChat ? '<span class="card-chat-badge">💬 new</span>' : ''}</div>
       </div>
       ${task.blocker ? `<div class="card-blocker">${task.blocker}</div>` : ''}
@@ -3058,6 +3128,11 @@ async function onColumnDrop(event) {
       saveStatusOverrides();
       activityOverrides[taskId] = Date.now();
       saveActivityOverrides();
+      if (choice !== prevStatus) {
+        recordStatusTransition(taskId, prevStatus, choice);
+        const task = TASKS.find(t => t.id === taskId);
+        sendRelayEvent('task_status_change', { taskId, title: task ? getTaskTitle(task) : taskId, from: prevStatus, to: choice });
+      }
       render();
       if (currentPanelTaskId === taskId) openPanel(taskId);
       return;
@@ -3073,6 +3148,7 @@ async function onColumnDrop(event) {
     queueDonePing(taskId);
   }
   if (newStatus !== prevStatus) {
+    recordStatusTransition(taskId, prevStatus, newStatus);
     const task = TASKS.find(t => t.id === taskId);
     sendRelayEvent('task_status_change', { taskId, title: task ? getTaskTitle(task) : taskId, from: prevStatus, to: newStatus });
   }
@@ -3163,6 +3239,7 @@ function render() {
   const now = new Date();
   document.getElementById('lastUpdated').textContent = 
     `Updated: ${now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+  if (activeTopTab === 'efficiency') renderEfficiencyDashboard();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -3530,6 +3607,7 @@ function openMetaEditor(field) {
   const priority = getTaskPriority(task);
   const owner = getTaskOwner(task);
   const due = getTaskDue(task) || '';
+  const category = getTaskCategory(task.id) || '';
 
   let inputHtml = '';
   if (field === 'status') {
@@ -3563,6 +3641,17 @@ function openMetaEditor(field) {
   } else if (field === 'title') {
     const title = getTaskTitle(task) || '';
     inputHtml = `<input id="metaEditValue" class="meta-edit-input" type="text" value="${title.replace(/"/g, '&quot;')}" />`;
+  } else if (field === 'category') {
+    inputHtml = `<select id="metaEditValue" class="meta-edit-input">
+      <option value="" ${category===''?'selected':''}>— Uncategorized</option>
+      <option value="Recruiting" ${category==='Recruiting'?'selected':''}>Recruiting</option>
+      <option value="Operations" ${category==='Operations'?'selected':''}>Operations</option>
+      <option value="Management" ${category==='Management'?'selected':''}>Management</option>
+      <option value="Sales" ${category==='Sales'?'selected':''}>Sales</option>
+      <option value="Marketing" ${category==='Marketing'?'selected':''}>Marketing</option>
+      <option value="Admin" ${category==='Admin'?'selected':''}>Admin</option>
+      <option value="Finance" ${category==='Finance'?'selected':''}>Finance</option>
+    </select>`;
   }
 
   document.getElementById('panelMetaEditor').innerHTML = `<div class="meta-edit-wrap">${inputHtml}<button class="task-chat-btn primary" onclick="applyMetaEdit('${field}')">Save</button><button class="task-chat-btn" onclick="cancelMetaEditor()">Cancel</button></div>`;
@@ -3631,7 +3720,10 @@ function applyMetaEdit(field) {
   const task = TASKS.find(t => t.id === taskId);
   if (field === 'status') {
     statusOverrides[taskId] = value; saveStatusOverrides();
-    if (value !== prevStatus) sendRelayEvent('task_status_change', { taskId, title: task ? getTaskTitle(task) : taskId, from: prevStatus, to: value });
+    if (value !== prevStatus) {
+      recordStatusTransition(taskId, prevStatus, value);
+      sendRelayEvent('task_status_change', { taskId, title: task ? getTaskTitle(task) : taskId, from: prevStatus, to: value });
+    }
   }
   if (field === 'priority') {
     const prev = getTaskPriority(task || { id: taskId, priority: null });
@@ -3653,6 +3745,12 @@ function applyMetaEdit(field) {
     const next = (value || '').trim() || prev;
     titleOverrides[taskId] = next; saveTitleOverrides();
     if (next !== prev) sendRelayEvent('task_title_change', { taskId, from: prev, to: next });
+  }
+  if (field === 'category') {
+    categoryMap[taskId] = value || null;
+    if (!categoryMap[taskId]) delete categoryMap[taskId];
+    saveCategoryMap();
+    sendRelayEvent('task_category_change', { taskId, category: categoryMap[taskId] || null });
   }
 
   if (field === 'status' && value === 'done' && prevStatus !== 'done') {
@@ -3871,6 +3969,141 @@ function checkHashRoute() {
   }
 }
 
+function ensureChartJs() {
+  return new Promise((resolve) => {
+    if (chartJsLoaded || window.Chart) { chartJsLoaded = true; return resolve(); }
+    const el = document.createElement('script');
+    el.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js';
+    el.onload = () => { chartJsLoaded = true; resolve(); };
+    document.head.appendChild(el);
+  });
+}
+
+function switchTopTab(tab) {
+  activeTopTab = tab;
+  const boardEl = document.getElementById('board');
+  const dashEl = document.getElementById('efficiencyDash');
+  const metrics = document.querySelector('.metrics-bar');
+  const filters = document.querySelector('.filter-bar');
+  const legend = document.querySelector('.legend');
+  document.getElementById('tabBoardBtn')?.classList.toggle('active', tab === 'board');
+  document.getElementById('tabEfficiencyBtn')?.classList.toggle('active', tab === 'efficiency');
+  if (tab === 'board') {
+    if (boardEl) boardEl.style.display = '';
+    if (metrics) metrics.style.display = '';
+    if (filters) filters.style.display = '';
+    if (legend) legend.style.display = '';
+    if (dashEl) dashEl.style.display = 'none';
+  } else {
+    if (boardEl) boardEl.style.display = 'none';
+    if (metrics) metrics.style.display = 'none';
+    if (filters) filters.style.display = 'none';
+    if (legend) legend.style.display = 'none';
+    if (dashEl) dashEl.style.display = '';
+    renderEfficiencyDashboard();
+  }
+}
+
+function getEffectiveStatus(task){ return getTaskStatus(task); }
+function getTaskHistoryStart(task){
+  const arr = statusHistory[task.id] || [];
+  if (arr.length) return arr[0].ts;
+  return Date.now();
+}
+function renderEfficiencyDashboard() {
+  const el = document.getElementById('efficiencyDash');
+  if (!el) return;
+
+  const now = new Date();
+  const startToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startWeek = (() => { const d=new Date(now); const day=(d.getDay()+6)%7; d.setDate(d.getDate()-day); d.setHours(0,0,0,0); return d.getTime(); })();
+  const startMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+  const tasks = TASKS.filter(t => showHiddenTasks || !isTaskDeleted(t.id));
+  const doneEntries = Object.entries(completedAtMap).filter(([id]) => TASKS.find(t=>t.id===id));
+  const doneToday = doneEntries.filter(([,ts]) => ts >= startToday).length;
+  const doneWeek = doneEntries.filter(([,ts]) => ts >= startWeek).length;
+  const doneMonth = doneEntries.filter(([,ts]) => ts >= startMonth).length;
+  const activeNow = tasks.filter(t => ['inprogress','progress'].includes(getEffectiveStatus(t))).length;
+
+  const flowItems = doneEntries.map(([id,ct]) => {
+    const st = startedAtMap[id];
+    const histStart = (statusHistory[id] && statusHistory[id][0] && statusHistory[id][0].ts) || Date.now();
+    return { id, ct, st, histStart };
+  });
+  const cyc = flowItems.filter(x => x.st && x.ct).map(x => (x.ct - x.st)/86400000);
+  const lead = flowItems.filter(x => x.ct && x.histStart).map(x => (x.ct - x.histStart)/86400000);
+  const avg = arr => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1) : '—';
+  const backlogTasks = tasks.filter(t => getEffectiveStatus(t)==='backlog');
+  const backlogAges = backlogTasks.map(t => (Date.now() - getTaskHistoryStart(t))/86400000);
+  const backlogAvg = backlogAges.length ? backlogAges.reduce((a,b)=>a+b,0)/backlogAges.length : null;
+
+  // 14 day velocity
+  const labels=[]; const vals=[];
+  for(let i=13;i>=0;i--){ const d=new Date(startToday - i*86400000); labels.push(d.toLocaleDateString('en-US',{month:'short',day:'numeric'})); const next=d.getTime()+86400000; vals.push(doneEntries.filter(([,ts])=>ts>=d.getTime()&&ts<next).length); }
+  const roll=vals.map((_,i)=>{ const a=vals.slice(Math.max(0,i-6),i+1); return a.reduce((x,y)=>x+y,0)/a.length; });
+
+  const pipeline = { backlog: tasks.filter(t=>getEffectiveStatus(t)==='backlog').length, inprogress: tasks.filter(t=>getEffectiveStatus(t)==='inprogress').length, focus: tasks.filter(t=>getEffectiveStatus(t)==='progress').length, done: tasks.filter(t=>getEffectiveStatus(t)==='done').length };
+
+  const monthDoneIds = doneEntries.filter(([,ts])=>ts>=startMonth).map(([id])=>id);
+  const catCounts={};
+  monthDoneIds.forEach(id=>{ const c=categoryMap[id] || 'Uncategorized'; catCounts[c]=(catCounts[c]||0)+1; });
+  const catRows = Object.entries(catCounts).sort((a,b)=>b[1]-a[1]);
+
+  const ageRows = backlogTasks.map(t=>({title:getTaskTitle(t), days:Math.floor((Date.now()-getTaskHistoryStart(t))/86400000), priority:getTaskPriority(t), owner:getOwnerLabel(getTaskOwner(t))})).sort((a,b)=>b.days-a.days);
+
+  // collaboration
+  let chatMap={}; try{ chatMap=JSON.parse(localStorage.getItem('taskChatLog')||'{}'); }catch{}
+  const weekAgo = Date.now()-7*86400000;
+  let jCount=0,mCount=0,mostTask='',most=0,withChat=0,noChat=0;
+  Object.entries(chatMap).forEach(([tid,arr])=>{ if(!Array.isArray(arr)) return; let local=0; const has=arr.length>0; if(has) withChat++; else noChat++; arr.forEach(e=>{ local++; const snd=(e.sender||'').toLowerCase(); const ts=Date.parse(e.createdAt||'') || Date.now(); if(ts<weekAgo) return; if(['you','jake','user'].includes(snd)) jCount++; else if(['mimir'].includes(snd)) mCount++; }); if(local>most){most=local; mostTask=tid;} });
+  noChat = tasks.length - withChat;
+
+  const backlogColor = backlogAvg===null ? 'var(--text-secondary)' : (backlogAvg<7 ? '#69d18a' : backlogAvg<14 ? '#f6c56b' : '#ff8a8a');
+
+  el.innerHTML = `
+    <div class="eff-header"><div class="eff-title" style="margin:0">Efficiency Dashboard</div><button class="eff-refresh" onclick="renderEfficiencyDashboard()">↻ Refresh</button></div>
+    <div class="eff-row">
+      <div class="eff-card"><div class="eff-value" style="color:#69d18a">${doneToday}</div><div class="eff-label">Done Today</div></div>
+      <div class="eff-card"><div class="eff-value" style="color:#69d18a">${doneWeek}</div><div class="eff-label">Done This Week</div></div>
+      <div class="eff-card"><div class="eff-value" style="color:#69d18a">${doneMonth}</div><div class="eff-label">Done This Month</div></div>
+      <div class="eff-card"><div class="eff-value" style="color:#76b8ff">${activeNow}</div><div class="eff-label">Active Now</div></div>
+    </div>
+    <div class="eff-grid-2">
+      <div class="eff-section"><div class="eff-title">14-Day Velocity</div><canvas id="velocityChart" height="120"></canvas></div>
+      <div class="eff-section"><div class="eff-title">Pipeline Snapshot</div><div class="eff-pipeline">
+        <div class="eff-stage">Backlog (${pipeline.backlog})</div><div class="eff-arrow">→</div>
+        <div class="eff-stage">In Progress (${pipeline.inprogress})</div><div class="eff-arrow">→</div>
+        <div class="eff-stage">Focus (${pipeline.focus})</div><div class="eff-arrow">→</div>
+        <div class="eff-stage">Done (${pipeline.done})</div>
+      </div></div>
+    </div>
+    <div class="eff-row" style="grid-template-columns:repeat(3,1fr)">
+      <div class="eff-card"><div class="eff-value">${avg(cyc)}</div><div class="eff-label">Avg days: active → done</div></div>
+      <div class="eff-card"><div class="eff-value">${avg(lead)}</div><div class="eff-label">Avg days: backlog → done</div></div>
+      <div class="eff-card"><div class="eff-value" style="color:${backlogColor}">${backlogAvg===null?'—':backlogAvg.toFixed(1)}</div><div class="eff-label">Backlog Avg Age (days)</div></div>
+    </div>
+    <div class="eff-grid-2">
+      <div class="eff-section"><div class="eff-title">Category Breakdown (Completed This Month)</div><canvas id="catChart" height="120"></canvas></div>
+      <div class="eff-section"><div class="eff-title">Category Table</div><table class="eff-table"><tr><th>Category</th><th>Done</th><th>Avg Cycle</th></tr>${catRows.map(([c,n])=>`<tr><td>${c}</td><td>${n}</td><td>${avg(flowItems.filter(x=> (categoryMap[x.id]||'Uncategorized')===c && x.st && x.ct).map(x=>(x.ct-x.st)/86400000))}</td></tr>`).join('')}</table></div>
+    </div>
+    <div class="eff-section"><div class="eff-title">Aging Backlog</div><table class="eff-table"><tr><th>Task Title</th><th>Days in Backlog</th><th>Priority</th><th>Owner</th></tr>${ageRows.slice(0,10).map(r=>`<tr><td>${r.title}</td><td style="color:${r.days<7?'#69d18a':r.days<14?'#f6c56b':'#ff8a8a'}">${r.days}</td><td>${r.priority}</td><td>${r.owner}</td></tr>`).join('')}</table>${ageRows.length>10?`<div class="eff-label" style="margin-top:6px">and ${ageRows.length-10} more…</div>`:''}</div>
+    <div class="eff-section"><div class="eff-title">Collaboration</div><table class="eff-table">
+      <tr><td>Messages sent by Jake this week</td><td>${jCount}</td></tr>
+      <tr><td>Messages sent by Mimir this week</td><td>${mCount}</td></tr>
+      <tr><td>Tasks with chat vs no chat</td><td>${withChat} / ${noChat}</td></tr>
+      <tr><td>Most active task</td><td>${mostTask || '—'}</td></tr>
+    </table></div>
+  `;
+
+  ensureChartJs().then(() => {
+    const vctx=document.getElementById('velocityChart');
+    if(vctx && window.Chart){ if(velocityChart) velocityChart.destroy(); velocityChart=new Chart(vctx,{type:'bar',data:{labels,datasets:[{label:'Done',data:vals,backgroundColor:'rgba(105,209,138,0.6)'},{type:'line',label:'7d avg',data:roll,borderColor:'#7ee7ff',borderWidth:1.5,pointRadius:0}]},options:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#8f93a7'}},y:{grid:{display:false},ticks:{color:'#8f93a7',precision:0}}}}}); }
+    const cctx=document.getElementById('catChart');
+    if(cctx && window.Chart){ if(categoryChart) categoryChart.destroy(); categoryChart=new Chart(cctx,{type:'doughnut',data:{labels:catRows.map(x=>x[0]),datasets:[{data:catRows.map(x=>x[1]),backgroundColor:['#7ee7ff','#69d18a','#76b8ff','#f6c56b','#c084fc','#fb7185','#94a3b8','#f59e0b']}]},options:{plugins:{legend:{position:'right',labels:{color:'#b9bdd1'}}}}}); }
+  });
+}
+
 // ══════════════════════════════════════════════════════════════
 // FILTERS
 // ══════════════════════════════════════════════════════════════
@@ -3908,6 +4141,7 @@ function filterPriority(priority, btn) {
     document.getElementById('boardWrap').classList.add('unlocked');
     try {
       render();
+      switchTopTab(activeTopTab);
       checkHashRoute();
     } catch (e) {
       console.error('Board render error after unlock:', e);
@@ -3943,6 +4177,7 @@ function filterPriority(priority, btn) {
     document.getElementById('pwGate').style.display = 'none';
     document.getElementById('boardWrap').classList.add('unlocked');
     render();
+    switchTopTab(activeTopTab);
   checkHashRoute();
   }
 
