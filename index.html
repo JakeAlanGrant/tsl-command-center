@@ -341,6 +341,27 @@ body {
   overflow: visible;
 }
 
+.card-delete-btn, .card-restore-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.35);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+  z-index: 3;
+}
+.card:hover .card-delete-btn, .card:hover .card-restore-btn { opacity: 1; }
+.card-delete-btn:hover { color: #ff8a8a; border-color: #ff8a8a55; }
+.card-restore-btn:hover { color: #7dd3fc; border-color: #7dd3fc55; }
+.card-hidden-task { opacity: 0.72; }
+
 .card:hover {
   background: var(--bg-card-hover);
   border-color: var(--border-hover);
@@ -1115,6 +1136,42 @@ body {
   font-size: 12px;
 }
 .task-chat-typing.show { display: flex; }
+.chat-launch-wrap { margin-top: 12px; }
+.chat-launch-btn {
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.chat-unread-badge {
+  margin-left: 8px;
+  background: rgba(126,231,255,0.25);
+  border: 1px solid rgba(126,231,255,0.55);
+  color: #7ee7ff;
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 10px;
+}
+.task-chat-popup {
+  display: none;
+  position: sticky;
+  bottom: 10px;
+  z-index: 5;
+  margin-top: 10px;
+  border: 1px solid var(--border);
+  background: #0e111a;
+  border-radius: 10px;
+  padding: 10px;
+  max-height: 350px;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.35);
+}
+.task-chat-popup.open { display: block; }
+.task-chat-popup-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.task-chat-close { border:1px solid var(--border); background:transparent; color:var(--text-secondary); border-radius:6px; padding:2px 8px; cursor:pointer; }
 .task-chat-typing-label {
   color: #7ee7ff;
   font-weight: 700;
@@ -1458,6 +1515,7 @@ body {
   <button class="filter-btn" onclick="filterPriority('urgent-important', this)">🔴 Urgent+Imp</button>
   <button class="filter-btn" onclick="filterPriority('important', this)">🟡 Important</button>
   <button class="filter-btn" onclick="filterPriority('urgent', this)">🔵 Urgent</button>
+  <button class="filter-btn" id="hiddenTasksToggle" onclick="toggleShowHiddenTasks(this)">Show hidden tasks</button>
 </div>
 
 <!-- ─── BOARD ─── -->
@@ -2704,6 +2762,7 @@ let activeStatusFilter = 'all';
 let currentPanelTaskId = null;
 let dragTaskId = null;
 let taskReplyPollTimer = null;
+const chatPopupState = {};
 
 const RELAY_URL_KEY = 'jag_board_relay_url_v1';
 const RELAY_ENABLED_KEY = 'jag_board_relay_enabled_v1';
@@ -2713,7 +2772,7 @@ function getRelayUrl() {
     const fromStorage = (localStorage.getItem(RELAY_URL_KEY) || '').trim();
     if (fromStorage) return fromStorage;
   } catch (_) {}
-  return 'https://relatives-designing-sports-ipaq.trycloudflare.com';
+  return 'https://clips-quebec-prefer-pulled.trycloudflare.com';
 }
 function setRelayUrl(v) {
   try { localStorage.setItem(RELAY_URL_KEY, String(v || '').trim()); } catch (_) {}
@@ -2727,6 +2786,10 @@ const OWNER_OVERRIDES_KEY = 'jag_board_owner_overrides_v1';
 const DUE_OVERRIDES_KEY = 'jag_board_due_overrides_v1';
 const TITLE_OVERRIDES_KEY = 'jag_board_title_overrides_v1';
 const ACTIVITY_OVERRIDES_KEY = 'jag_board_activity_overrides_v1';
+const DELETED_TASKS_KEY = 'jag_board_deleted_tasks_v1';
+let deletedTaskIds = [];
+let showHiddenTasks = false;
+try { deletedTaskIds = JSON.parse(localStorage.getItem(DELETED_TASKS_KEY) || '[]'); if (!Array.isArray(deletedTaskIds)) deletedTaskIds = []; } catch (_) { deletedTaskIds = []; }
 
 let statusOverrides = {};
 let priorityOverrides = {};
@@ -2754,6 +2817,31 @@ function saveOwnerOverrides() { localStorage.setItem(OWNER_OVERRIDES_KEY, JSON.s
 function saveDueOverrides() { localStorage.setItem(DUE_OVERRIDES_KEY, JSON.stringify(dueOverrides)); }
 function saveTitleOverrides() { localStorage.setItem(TITLE_OVERRIDES_KEY, JSON.stringify(titleOverrides)); }
 function saveActivityOverrides() { localStorage.setItem(ACTIVITY_OVERRIDES_KEY, JSON.stringify(activityOverrides)); }
+function saveDeletedTasks() { localStorage.setItem(DELETED_TASKS_KEY, JSON.stringify(deletedTaskIds)); }
+function isTaskDeleted(taskId) { return deletedTaskIds.includes(taskId); }
+function confirmHideTask(taskId, ev) {
+  if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+  if (!confirm('Hide this task? (can be restored)')) return;
+  if (!deletedTaskIds.includes(taskId)) {
+    deletedTaskIds.push(taskId);
+    saveDeletedTasks();
+    render();
+  }
+}
+function restoreTask(taskId, ev) {
+  if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+  deletedTaskIds = deletedTaskIds.filter(id => id !== taskId);
+  saveDeletedTasks();
+  render();
+}
+function toggleShowHiddenTasks(btn) {
+  showHiddenTasks = !showHiddenTasks;
+  if (btn) {
+    btn.classList.toggle('active', showHiddenTasks);
+    btn.textContent = showHiddenTasks ? 'Hide hidden tasks' : 'Show hidden tasks';
+  }
+  render();
+}
 
 function getTaskFromRoute() {
   const params = new URLSearchParams(window.location.search);
@@ -2796,7 +2884,8 @@ function createCard(task) {
   const effectivePriority = getTaskPriority(task);
   const effectiveDue = getTaskDue(task);
   const effectiveStatus = getTaskStatus(task);
-  
+  const deleted = isTaskDeleted(task.id);
+
   if (effectiveDue) {
     if (effectiveDue < today) {
       dueClass = 'overdue';
@@ -2811,14 +2900,19 @@ function createCard(task) {
     }
   }
 
-  const ownerClass = effectiveOwner === 'mimir' ? 'mimir' : 
-                     effectiveOwner === 'josh' ? 'josh' : 
+  const ownerClass = effectiveOwner === 'mimir' ? 'mimir' :
+                     effectiveOwner === 'josh' ? 'josh' :
                      effectiveOwner === 'ops-manager' ? 'ops-manager' :
                      effectiveOwner === 'sales-manager' ? 'sales-manager' :
                      effectiveOwner === 'recruiting-manager' ? 'recruiting-manager' : '';
 
+  const actionBtn = deleted
+    ? `<button class="card-restore-btn" onclick="restoreTask('${task.id}', event)" title="Restore task">↩</button>`
+    : `<button class="card-delete-btn" onclick="confirmHideTask('${task.id}', event)" title="Hide task">🗑</button>`;
+
   return `
-    <div class="card" data-owner="${effectiveOwner}" data-priority="${effectivePriority}" data-task-id="${task.id}" draggable="true" onclick="handleCardClick(event, '${task.id}')" ondragstart="onCardDragStart(event, '${task.id}')" ondragend="onCardDragEnd(event)">
+    <div class="card ${deleted ? 'card-hidden-task' : ''}" data-owner="${effectiveOwner}" data-priority="${effectivePriority}" data-task-id="${task.id}" draggable="true" onclick="handleCardClick(event, '${task.id}')" ondragstart="onCardDragStart(event, '${task.id}')" ondragend="onCardDragEnd(event)">
+      ${actionBtn}
       <div class="card-priority ${effectivePriority}"></div>
       <div class="card-top">
         <div class="card-title">${getTaskTitle(task)}</div>
@@ -2976,6 +3070,7 @@ function render() {
     const priority = getTaskPriority(t);
     if (activeOwnerFilter !== 'all' && owner !== activeOwnerFilter) return false;
     if (activePriorityFilter !== 'all' && priority !== activePriorityFilter) return false;
+    if (!showHiddenTasks && isTaskDeleted(t.id)) return false;
     if (activeStatusFilter === 'urgent') {
       if (!priority || !priority.includes('urgent')) return false;
     } else if (activeStatusFilter !== 'all' && getTaskStatus(t) !== activeStatusFilter) {
@@ -3097,44 +3192,6 @@ function openPanel(taskId) {
       </div>`;
   }
 
-  // Task Chat (V2)
-  const savedNote = getTaskChatNote(task.id);
-  const relayConfigured = !!(localStorage.getItem(RELAY_URL_KEY) || '').trim();
-  const relayWarning = relayConfigured ? '' : `<div class="relay-warning">⚠ Relay URL not configured. Open DevTools and run: localStorage.setItem('jag_board_relay_url_v1', 'https://targeted-cancer-progress-accordance.trycloudflare.com')</div>`;
-  const log = getTaskChatLog(task.id).filter(entry => !String(entry.text || '').toLowerCase().includes('relay delivery'));
-  const logHtml = log.length
-    ? `<div class="task-chat-log">${log.map(entry => {
-        const sender = String(entry.sender || '').toLowerCase();
-        const isYou = sender === 'you' || sender === 'jake' || sender === 'user';
-        const isSystem = sender === 'system';
-        const who = isSystem ? '' : (isYou ? 'You' : 'Mimir');
-        const whoClass = isYou ? 'chat-who-you' : 'chat-who-mimir';
-        const whoSpan = who ? `<span class="${whoClass}">${who}</span> ` : '';
-        let receipt = '';
-        if (isYou && typeof entry.delivered === 'boolean') {
-          receipt = entry.delivered
-            ? '<span class="chat-receipt sent">✓ sent</span>'
-            : '<span class="chat-receipt failed">⚠️ failed</span>';
-        }
-        return `<div class="task-chat-log-item"><div class="task-chat-log-time">${entry.ts}${receipt}</div><div class="task-chat-log-text">${whoSpan}${entry.text}</div></div>`;
-      }).join('')}</div>`
-    : '';
-  bodyHTML += `
-    <div class="panel-section">
-      <div class="panel-section-title">Chat with Mimir</div>
-      <textarea class="task-chat-box" id="taskChatInput" placeholder="Type an update, blocker, or request for this task...">${savedNote || ''}</textarea>
-      <div class="task-chat-actions">
-        <button class="task-chat-btn primary" onclick="sendTaskChat('${task.id}')">Send</button>
-        <button class="task-chat-btn" onclick="markTaskChatAddressed('${task.id}')">Mark Addressed</button>
-        <button class="task-chat-btn" onclick="saveTaskChat('${task.id}')">Save Draft</button>
-        <button class="task-chat-btn" onclick="clearTaskChat('${task.id}')">Clear</button>
-      </div>
-      <div class="task-chat-meta">Replies auto-sync while this panel is open and appear inline below your message.</div>
-      ${relayWarning}
-      ${logHtml}
-      <div class="task-chat-typing" id="taskChatTyping"><span class="task-chat-typing-label">Mimir</span><div class="typing-dots"><span></span><span></span><span></span></div></div>
-    </div>`;
-
   // Subtasks
   if (task.subtasks && task.subtasks.length > 0) {
     const stateKey = task.id;
@@ -3160,6 +3217,49 @@ function openPanel(taskId) {
         <div class="subtask-list">${items}</div>
       </div>`;
   }
+
+  // Task Chat (V2 Popup)
+  const savedNote = getTaskChatNote(task.id);
+  const relayConfigured = !!(localStorage.getItem(RELAY_URL_KEY) || '').trim();
+  const relayWarning = relayConfigured ? '' : `<div class="relay-warning">⚠ Relay URL not configured. Open DevTools and run: localStorage.setItem('jag_board_relay_url_v1', 'https://targeted-cancer-progress-accordance.trycloudflare.com')</div>`;
+  const log = getTaskChatLog(task.id).filter(entry => !String(entry.text || '').toLowerCase().includes('relay delivery'));
+  const logHtml = log.length
+    ? `<div class="task-chat-log">${log.map(entry => {
+        const sender = String(entry.sender || '').toLowerCase();
+        const isYou = sender === 'you' || sender === 'jake' || sender === 'user';
+        const isSystem = sender === 'system';
+        const who = isSystem ? '' : (isYou ? 'You' : 'Mimir');
+        const whoClass = isYou ? 'chat-who-you' : 'chat-who-mimir';
+        const whoSpan = who ? `<span class="${whoClass}">${who}</span> ` : '';
+        let receipt = '';
+        if (isYou && typeof entry.delivered === 'boolean') {
+          receipt = entry.delivered
+            ? '<span class="chat-receipt sent">✓ sent</span>'
+            : '<span class="chat-receipt failed">⚠️ failed</span>';
+        }
+        return `<div class="task-chat-log-item"><div class="task-chat-log-time">${entry.ts}${receipt}</div><div class="task-chat-log-text">${whoSpan}${entry.text}</div></div>`;
+      }).join('')}</div>`
+    : '';
+  const chatOpen = !!chatPopupState[task.id];
+  const unreadBadge = getTaskChatUnread(task.id) ? '<span class="chat-unread-badge">new</span>' : '';
+  bodyHTML += `
+    <div class="chat-launch-wrap">
+      <button class="chat-launch-btn" onclick="toggleTaskChatPopup('${task.id}')">💬 Chat with Mimir ${unreadBadge}</button>
+      <div class="task-chat-popup ${chatOpen ? 'open' : ''}" id="taskChatPopup">
+        <div class="task-chat-popup-head"><div class="panel-section-title" style="margin:0">Chat with Mimir</div><button class="task-chat-close" onclick="toggleTaskChatPopup('${task.id}', false)">Close</button></div>
+      <textarea class="task-chat-box" id="taskChatInput" placeholder="Type an update, blocker, or request for this task...">${savedNote || ''}</textarea>
+      <div class="task-chat-actions">
+        <button class="task-chat-btn primary" onclick="sendTaskChat('${task.id}')">Send</button>
+        <button class="task-chat-btn" onclick="markTaskChatAddressed('${task.id}')">Mark Addressed</button>
+        <button class="task-chat-btn" onclick="saveTaskChat('${task.id}')">Save Draft</button>
+        <button class="task-chat-btn" onclick="clearTaskChat('${task.id}')">Clear</button>
+      </div>
+      <div class="task-chat-meta">Replies auto-sync while this panel is open and appear inline below your message.</div>
+      ${relayWarning}
+      ${logHtml}
+      <div class="task-chat-typing" id="taskChatTyping"><span class="task-chat-typing-label">Mimir</span><div class="typing-dots"><span></span><span></span><span></span></div></div>
+      </div>
+    </div>`;
 
   // Docs
   if (task.docs && task.docs.length > 0) {
@@ -3268,6 +3368,13 @@ function saveTaskChat(taskId) {
   if (val) map[taskId] = val;
   else delete map[taskId];
   localStorage.setItem('taskChatNotes', JSON.stringify(map));
+}
+
+function toggleTaskChatPopup(taskId, forceOpen = null) {
+  const next = forceOpen === null ? !chatPopupState[taskId] : !!forceOpen;
+  chatPopupState[taskId] = next;
+  const popup = document.getElementById('taskChatPopup');
+  if (popup) popup.classList.toggle('open', next);
 }
 
 function clearTaskChat(taskId) {
@@ -3606,8 +3713,11 @@ async function syncTaskReplies(taskId, forceOpen = false) {
       localStorage.setItem('taskChatUnread', JSON.stringify(unreadMap));
 
       if (forceOpen || currentPanelTaskId === taskId) {
+        chatPopupState[taskId] = true;
         setTaskTyping(false);
         newEntries.forEach(appendChatEntryToDom);
+        const popup = document.getElementById('taskChatPopup');
+        if (popup) popup.classList.add('open');
       }
 
       render();
