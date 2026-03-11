@@ -3303,7 +3303,7 @@ function createCard(task) {
       <div class="card-top">
         <div class="card-title">${getTaskTitle(task)}</div>
         ${completedAtMap[task.id] ? `<div class="card-completed">✓ Completed ${fmtShortDate(completedAtMap[task.id])}</div>` : ''}
-        <div class="card-id">${task.id}${hasUnreadChat ? `<span class="card-chat-badge" onclick="event.preventDefault();event.stopPropagation();openPanelWithChat('${task.id}')">💬 new</span>` : ''}${pendingDelete ? '<span class="pending-delete-badge">🗑 PENDING DELETE</span>' : ''}</div>
+        <div class="card-id">${task.id}${hasUnreadChat ? `<span class="card-chat-badge" onclick="event.preventDefault();event.stopPropagation();openChatWidgetOnly('${task.id}')">💬 new</span>` : ''}${pendingDelete ? '<span class="pending-delete-badge">🗑 PENDING DELETE</span>' : ''}</div>
       </div>
       ${task.blocker ? `<div class="card-blocker">${task.blocker}</div>` : ''}
       <div class="card-meta">
@@ -4420,6 +4420,17 @@ function updatePanelFlagBtn() {
     btn.title = 'Flag for deletion';
     btn.style.borderColor = 'rgba(255,77,77,0.35)';
   }
+}
+
+function openChatWidgetOnly(taskId) {
+  // Clear unread badge
+  const unreadMap = getTaskChatUnreadMap();
+  delete unreadMap[taskId];
+  localStorage.setItem('taskChatUnread', JSON.stringify(unreadMap));
+  // Open widget without opening the task panel
+  openChatWidget(taskId);
+  // Re-render cards so badge disappears
+  render();
 }
 
 function openPanelWithChat(taskId) {
