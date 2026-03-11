@@ -1012,6 +1012,30 @@ body {
   margin-bottom: 8px;
   font-family: 'Space Mono', monospace;
 }
+.subtask-delete-btn {
+  border: 1px solid var(--border-subtle);
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 6px;
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0;
+}
+.subtask-item:hover .subtask-delete-btn { opacity: 1; }
+.subtask-delete-btn:hover { color: #ff8a8a; border-color: #ff8a8a55; }
+.subtask-add-wrap { margin-top: 10px; }
+.subtask-add-editor { display: flex; gap: 8px; align-items: center; }
+.subtask-add-input {
+  flex: 1;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  padding: 7px 9px;
+  font-size: 12px;
+}
 
 /* Docs */
 .docs-list { display: flex; flex-direction: column; gap: 6px; }
@@ -2843,6 +2867,20 @@ function toggleShowHiddenTasks(btn) {
   render();
 }
 
+function saveCustomSubtasks() { localStorage.setItem(CUSTOM_SUBTASKS_KEY, JSON.stringify(customSubtasks)); }
+function saveSubtaskDoneMap() { localStorage.setItem(SUBTASK_DONE_KEY, JSON.stringify(subtaskDoneMap)); }
+function subtaskKey(taskId, subtaskId) { return `${taskId}:${subtaskId}`; }
+function getMergedSubtasks(task) {
+  const base = (task.subtasks || []).map((s, i) => ({ id: `hc-${i}`, text: s.text, done: !!s.done, custom: false }));
+  const extra = (customSubtasks[task.id] || []).map(s => ({ id: s.id, text: s.text, done: !!s.done, custom: true }));
+  return [...base, ...extra];
+}
+function getSubtaskDone(taskId, subtask) {
+  const key = subtaskKey(taskId, subtask.id);
+  if (key in subtaskDoneMap) return !!subtaskDoneMap[key];
+  return !!subtask.done;
+}
+
 function getTaskFromRoute() {
   const params = new URLSearchParams(window.location.search);
   const qp = params.get('task');
@@ -2863,8 +2901,13 @@ function filterByMetric(status, el) {
   render();
 }
 
-// Subtask state (in-memory toggle, resets on reload)
-const subtaskState = {};
+const CUSTOM_SUBTASKS_KEY = 'jag_board_subtasks_v1';
+const SUBTASK_DONE_KEY = 'jag_board_subtask_done_v1';
+let customSubtasks = {};
+let subtaskDoneMap = {};
+let subtaskEditorOpen = {};
+try { customSubtasks = JSON.parse(localStorage.getItem(CUSTOM_SUBTASKS_KEY) || '{}'); } catch (_) { customSubtasks = {}; }
+try { subtaskDoneMap = JSON.parse(localStorage.getItem(SUBTASK_DONE_KEY) || '{}'); } catch (_) { subtaskDoneMap = {}; }
 
 function getOwnerLabel(owner) {
   const map = {
@@ -3193,28 +3236,32 @@ function openPanel(taskId) {
   }
 
   // Subtasks
-  if (task.subtasks && task.subtasks.length > 0) {
-    const stateKey = task.id;
-    if (!subtaskState[stateKey]) {
-      subtaskState[stateKey] = task.subtasks.map(s => s.done);
-    }
-    const states = subtaskState[stateKey];
-    const doneCount = states.filter(Boolean).length;
-    const total = states.length;
+  const mergedSubtasks = getMergedSubtasks(task);
+  {
+    const doneCount = mergedSubtasks.filter(st => getSubtaskDone(task.id, st)).length;
+    const total = mergedSubtasks.length;
 
-    const items = task.subtasks.map((s, i) => {
-      const isDone = states[i];
-      return `<div class="subtask-item ${isDone ? 'done-task' : ''}" onclick="toggleSubtask('${task.id}', ${i})">
+    const items = mergedSubtasks.map((st) => {
+      const isDone = getSubtaskDone(task.id, st);
+      return `<div class="subtask-item ${isDone ? 'done-task' : ''}" onclick="toggleSubtask('${task.id}', '${st.id}')">
         <div class="subtask-checkbox">${isDone ? '✓' : ''}</div>
-        <div class="subtask-text">${s.text}</div>
+        <div class="subtask-text">${st.text}</div>
+        ${st.custom ? `<button class="subtask-delete-btn" onclick="deleteCustomSubtask('${task.id}','${st.id}', event)" title="Delete subtask">🗑</button>` : ''}
       </div>`;
     }).join('');
+
+    const addEditor = subtaskEditorOpen[task.id]
+      ? `<div class="subtask-add-editor"><input id="newSubtaskInput" class="subtask-add-input" type="text" placeholder="Write subtask..." />
+          <button class="task-chat-btn primary" onclick="saveNewSubtask('${task.id}')">Save</button>
+          <button class="task-chat-btn" onclick="cancelAddSubtask('${task.id}')">Cancel</button></div>`
+      : `<button class="task-chat-btn" onclick="openAddSubtask('${task.id}')">+ Add subtask</button>`;
 
     bodyHTML += `
       <div class="panel-section">
         <div class="panel-section-title">Subtasks</div>
         <div class="subtask-progress">${doneCount}/${total} complete</div>
         <div class="subtask-list">${items}</div>
+        <div class="subtask-add-wrap">${addEditor}</div>
       </div>`;
   }
 
@@ -3309,13 +3356,48 @@ function closePanel() {
   history.replaceState(null, '', window.location.pathname);
 }
 
-function toggleSubtask(taskId, index) {
-  if (!subtaskState[taskId]) {
-    const task = TASKS.find(t => t.id === taskId);
-    subtaskState[taskId] = task.subtasks.map(s => s.done);
-  }
-  subtaskState[taskId][index] = !subtaskState[taskId][index];
-  openPanel(taskId); // re-render panel
+function toggleSubtask(taskId, subtaskId) {
+  const task = TASKS.find(t => t.id === taskId);
+  if (!task) return;
+  const subtask = getMergedSubtasks(task).find(s => s.id === subtaskId);
+  if (!subtask) return;
+  const key = subtaskKey(taskId, subtaskId);
+  const next = !getSubtaskDone(taskId, subtask);
+  subtaskDoneMap[key] = next;
+  saveSubtaskDoneMap();
+  openPanel(taskId);
+}
+
+function openAddSubtask(taskId) {
+  subtaskEditorOpen[taskId] = true;
+  openPanel(taskId);
+}
+
+function cancelAddSubtask(taskId) {
+  delete subtaskEditorOpen[taskId];
+  openPanel(taskId);
+}
+
+function saveNewSubtask(taskId) {
+  const input = document.getElementById('newSubtaskInput');
+  const text = (input?.value || '').trim();
+  if (!text) return;
+  if (!customSubtasks[taskId]) customSubtasks[taskId] = [];
+  const id = `cs-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`;
+  customSubtasks[taskId].push({ id, text, done: false });
+  saveCustomSubtasks();
+  delete subtaskEditorOpen[taskId];
+  openPanel(taskId);
+}
+
+function deleteCustomSubtask(taskId, subtaskId, ev) {
+  if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+  customSubtasks[taskId] = (customSubtasks[taskId] || []).filter(s => s.id !== subtaskId);
+  if (!customSubtasks[taskId].length) delete customSubtasks[taskId];
+  delete subtaskDoneMap[subtaskKey(taskId, subtaskId)];
+  saveCustomSubtasks();
+  saveSubtaskDoneMap();
+  openPanel(taskId);
 }
 
 function copyLink() {
