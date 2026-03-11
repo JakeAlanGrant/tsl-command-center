@@ -139,6 +139,8 @@ body {
 .eff-arrow { color: var(--text-muted); }
 .eff-table { width:100%; border-collapse:collapse; font-size:12px; }
 .eff-table td,.eff-table th{ border-bottom:1px solid var(--border-subtle); padding:6px; text-align:left;}
+.eff-row-clickable { cursor:pointer; transition: background 0.12s; }
+.eff-row-clickable:hover { background: rgba(91,141,248,0.1); }
 .eff-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
 .eff-refresh { border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); border-radius:8px; padding:5px 9px; cursor:pointer; font-size:12px; }
 .eff-cat-filter-badge { font-size:11px; background:rgba(126,231,255,0.12); border:1px solid rgba(126,231,255,0.4); border-radius:6px; padding:2px 8px; color:#7ee7ff; }
@@ -4289,7 +4291,7 @@ function renderEfficiencyDashboard() {
   monthDoneIds.forEach(id=>{ const c=categoryMap[id] || 'Uncategorized'; catCounts[c]=(catCounts[c]||0)+1; });
   const catRows = Object.entries(catCounts).sort((a,b)=>b[1]-a[1]);
 
-  const ageRows = backlogTasks.map(t=>({title:getTaskTitle(t), days:Math.floor((Date.now()-getTaskHistoryStart(t))/86400000), priority:getTaskPriority(t), owner:getOwnerLabel(getTaskOwner(t))})).sort((a,b)=>b.days-a.days);
+  const ageRows = backlogTasks.map(t=>({id:t.id, title:getTaskTitle(t), days:Math.floor((Date.now()-getTaskHistoryStart(t))/86400000), priority:getTaskPriority(t), owner:getOwnerLabel(getTaskOwner(t))})).sort((a,b)=>b.days-a.days);
 
   // collaboration
   let chatMap={}; try{ chatMap=JSON.parse(localStorage.getItem('taskChatLog')||'{}'); }catch{}
@@ -4358,8 +4360,8 @@ function renderEfficiencyDashboard() {
       <div class="eff-section"><div class="eff-title">Category Breakdown (Completed This Month)</div><canvas id="catChart" height="120"></canvas></div>
       <div class="eff-section"><div class="eff-title">Category Table</div><table class="eff-table"><tr><th>Category</th><th>Done</th><th>Avg Cycle</th></tr>${catRows.map(([c,n])=>`<tr style="cursor:pointer;${catFilter===c?'background:rgba(126,231,255,0.1)':''}" onclick="activeCategoryFilter=activeCategoryFilter==='${c}'?null:'${c}';renderEfficiencyDashboard()"><td>${catFilter===c?'▸ ':''}<strong>${c}</strong></td><td>${n}</td><td>${avg(flowItems.filter(x=> (categoryMap[x.id]||'Uncategorized')===c && x.st && x.ct).map(x=>(x.ct-x.st)/86400000))}</td></tr>`).join('')}</table></div>
     </div>
-    <div class="eff-section"><div class="eff-title">Aging Backlog</div><table class="eff-table"><tr><th>Task Title</th><th>Days in Backlog</th><th>Priority</th><th>Owner</th></tr>${ageRows.slice(0,10).map(r=>`<tr><td>${r.title}</td><td style="color:${r.days<7?'#69d18a':r.days<14?'#f6c56b':'#ff8a8a'}">${r.days}</td><td>${r.priority}</td><td>${r.owner}</td></tr>`).join('')}</table>${ageRows.length>10?`<div class="eff-label" style="margin-top:6px">and ${ageRows.length-10} more…</div>`:''}</div>
-    <div class="eff-section"><div class="eff-title">⚠ Stale In Progress (3+ days)</div>${staleWipRows.length===0?'<div class="eff-label">No stale WIP — looking good.</div>':`<table class="eff-table"><tr><th>Task Title</th><th>Stage</th><th>Days Stuck</th><th>Owner</th></tr>${staleWipRows.map(r=>`<tr><td>${r.title}</td><td>${r.stage}</td><td style="color:${r.days>=7?'#ff8a8a':'#f6c56b'}">${r.days}</td><td>${r.owner}</td></tr>`).join('')}</table>`}</div>
+    <div class="eff-section"><div class="eff-title">Aging Backlog</div><table class="eff-table"><tr><th>Task Title</th><th>Days in Backlog</th><th>Priority</th><th>Owner</th></tr>${ageRows.slice(0,10).map(r=>`<tr class="eff-row-clickable" onclick="switchTopTab('board');openPanel('${r.id}')"><td>${r.title}</td><td style="color:${r.days<7?'#69d18a':r.days<14?'#f6c56b':'#ff8a8a'}">${r.days}</td><td>${r.priority}</td><td>${r.owner}</td></tr>`).join('')}</table>${ageRows.length>10?`<div class="eff-label" style="margin-top:6px">and ${ageRows.length-10} more…</div>`:''}</div>
+    <div class="eff-section"><div class="eff-title">⚠ Stale In Progress (3+ days)</div>${staleWipRows.length===0?'<div class="eff-label">No stale WIP — looking good.</div>':`<table class="eff-table"><tr><th>Task Title</th><th>Stage</th><th>Days Stuck</th><th>Owner</th></tr>${staleWipRows.map(r=>`<tr class="eff-row-clickable" onclick="switchTopTab('board');openPanel('${r.id}')"><td>${r.title}</td><td>${r.stage}</td><td style="color:${r.days>=7?'#ff8a8a':'#f6c56b'}">${r.days}</td><td>${r.owner}</td></tr>`).join('')}</table>`}</div>
     <div class="eff-section"><div class="eff-title">Collaboration</div><table class="eff-table">
       <tr><td>Messages sent by Jake this week</td><td>${jCount}</td></tr>
       <tr><td>Messages sent by Mimir this week</td><td>${mCount}</td></tr>
