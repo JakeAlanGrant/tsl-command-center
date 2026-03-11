@@ -366,7 +366,7 @@ body {
 
 .card-delete-btn, .card-restore-btn {
   position: absolute;
-  top: 8px;
+  bottom: 8px;
   right: 8px;
   width: 22px;
   height: 22px;
@@ -1621,6 +1621,17 @@ body {
   color: var(--text-secondary); border-radius: 6px;
   padding: 5px 10px; font-size: 12px; cursor: pointer;
 }
+.panel-flag-delete-btn {
+  border: 1px solid rgba(255,77,77,0.35);
+  background: transparent;
+  color: #ff8a8a;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.panel-flag-delete-btn:hover { background: rgba(255,77,77,0.12); }
 /* Clickable chat badge on card */
 .card-chat-badge {
   cursor: pointer; margin-left: 5px;
@@ -1835,6 +1846,7 @@ body {
     </div>
     <div class="panel-actions">
       <button class="panel-btn" id="copyLinkBtn" onclick="copyLink()" title="Copy link">🔗</button>
+      <button class="panel-flag-delete-btn" id="panelFlagDeleteBtn" onclick="panelFlagForDeletion()" title="Flag for deletion">🗑</button>
       <button class="panel-btn" onclick="closePanel()" title="Close">✕</button>
     </div>
   </div>
@@ -3661,6 +3673,7 @@ function openPanel(taskId) {
   document.getElementById('panelOverlay').classList.add('open');
   document.getElementById('detailPanel').classList.add('open');
   document.getElementById('copyLinkBtn').classList.remove('copied');
+  updatePanelFlagBtn();
 }
 
 function closePanel() {
@@ -4304,6 +4317,33 @@ function checkHashRoute() {
   const routeTask = getTaskFromRoute();
   if (routeTask && TASKS.find(t => t.id === routeTask)) {
     openPanel(routeTask);
+  }
+}
+
+function panelFlagForDeletion() {
+  const taskId = currentPanelTaskId;
+  if (!taskId) return;
+  const existing = getDeleteRequest(taskId);
+  if (existing) {
+    // Already flagged — dismiss instead
+    dismissDeleteRequest(taskId);
+    return;
+  }
+  confirmHideTask(taskId, null);
+}
+
+function updatePanelFlagBtn() {
+  const btn = document.getElementById('panelFlagDeleteBtn');
+  if (!btn || !currentPanelTaskId) return;
+  const req = getDeleteRequest(currentPanelTaskId);
+  if (req) {
+    btn.textContent = '↩ Undo Flag';
+    btn.title = 'Dismiss delete request';
+    btn.style.borderColor = 'rgba(255,77,77,0.6)';
+  } else {
+    btn.textContent = '🗑';
+    btn.title = 'Flag for deletion';
+    btn.style.borderColor = 'rgba(255,77,77,0.35)';
   }
 }
 
