@@ -3156,6 +3156,7 @@ function executeDeleteTask(taskId) {
   if (!deletedTaskIds.includes(taskId)) {
     deletedTaskIds.push(taskId);
     saveDeletedTasks();
+    pushDeletionToRelay(taskId);
   }
   clearDeleteRequest(taskId);
   if (currentPanelTaskId === taskId) closePanel();
@@ -3415,6 +3416,7 @@ async function onColumnDrop(event) {
 
   statusOverrides[taskId] = newStatus;
   saveStatusOverrides();
+  pushTaskOverrideToRelay(taskId, 'status', newStatus);
   activityOverrides[taskId] = Date.now();
   saveActivityOverrides();
 
@@ -3715,6 +3717,7 @@ function saveNewSubtask(taskId) {
   const id = `cs-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`;
   customSubtasks[taskId].push({ id, text, done: false });
   saveCustomSubtasks();
+  pushSubtasksToRelay(taskId, customSubtasks[taskId]);
   delete subtaskEditorOpen[taskId];
   openPanel(taskId);
 }
@@ -3726,6 +3729,7 @@ function deleteCustomSubtask(taskId, subtaskId, ev) {
   delete subtaskDoneMap[subtaskKey(taskId, subtaskId)];
   saveCustomSubtasks();
   saveSubtaskDoneMap();
+  pushSubtasksToRelay(taskId, customSubtasks[taskId] || []);
   openPanel(taskId);
 }
 
@@ -4004,6 +4008,7 @@ function beginInlineTitleEdit(taskId) {
     if (next !== original) {
       titleOverrides[taskId] = next;
       saveTitleOverrides();
+      pushTaskOverrideToRelay(taskId, 'title', next);
       sendRelayEvent('task_title_change', { taskId, from: original, to: next });
       render();
     }
@@ -4043,6 +4048,7 @@ function applyMetaEdit(field) {
   const task = TASKS.find(t => t.id === taskId);
   if (field === 'status') {
     statusOverrides[taskId] = value; saveStatusOverrides();
+    pushTaskOverrideToRelay(taskId, 'status', value);
     if (value !== prevStatus) {
       recordStatusTransition(taskId, prevStatus, value);
       sendRelayEvent('task_status_change', { taskId, title: task ? getTaskTitle(task) : taskId, from: prevStatus, to: value });
@@ -4051,28 +4057,33 @@ function applyMetaEdit(field) {
   if (field === 'priority') {
     const prev = getTaskPriority(task || { id: taskId, priority: null });
     priorityOverrides[taskId] = value; savePriorityOverrides();
+    pushTaskOverrideToRelay(taskId, 'priority', value);
     if (value !== prev) sendRelayEvent('task_priority_change', { taskId, title: task ? getTaskTitle(task) : taskId, from: prev, to: value });
   }
   if (field === 'owner') {
     const prev = getTaskOwner(task || { id: taskId, owner: null });
     ownerOverrides[taskId] = value; saveOwnerOverrides();
+    pushTaskOverrideToRelay(taskId, 'owner', value);
     if (value !== prev) sendRelayEvent('task_owner_change', { taskId, title: task ? getTaskTitle(task) : taskId, from: prev, to: value });
   }
   if (field === 'due') {
     const prev = getTaskDue(task || { id: taskId, due: null });
     dueOverrides[taskId] = value || null; saveDueOverrides();
+    pushTaskOverrideToRelay(taskId, 'due', value || null);
     if ((value || null) !== (prev || null)) sendRelayEvent('task_due_change', { taskId, title: task ? getTaskTitle(task) : taskId, from: prev || null, to: value || null });
   }
   if (field === 'title') {
     const prev = getTaskTitle(task || { id: taskId, title: '' });
     const next = (value || '').trim() || prev;
     titleOverrides[taskId] = next; saveTitleOverrides();
+    pushTaskOverrideToRelay(taskId, 'title', next);
     if (next !== prev) sendRelayEvent('task_title_change', { taskId, from: prev, to: next });
   }
   if (field === 'category') {
     categoryMap[taskId] = value || null;
     if (!categoryMap[taskId]) delete categoryMap[taskId];
     saveCategoryMap();
+    pushTaskOverrideToRelay(taskId, 'category', value || null);
     sendRelayEvent('task_category_change', { taskId, category: categoryMap[taskId] || null });
   }
 
@@ -4159,6 +4170,92 @@ function setTaskTyping(show) {
 }
 
 
+// ── Server-side board state sync (cross-device) ───────────────
+let _lastFullStateFetch = 0;
+
+async function fetchBoardStateFromRelay() {
+  if (!relayEnabled()) { render(); return; }
+  const base = getRelayApiBase();
+  if (!base) { render(); return; }
+  try {
+    const res = await fetch(`${base}/board-state`);
+    if (!res.ok) { render(); return; }
+    const json = await res.json();
+    const state = json.state || json;
+    if (!state) { render(); return; }
+
+    // Apply task overrides — relay is authoritative
+    if (state.tasks && typeof state.tasks === 'object') {
+      for (const [id, ov] of Object.entries(state.tasks)) {
+        if (ov.status   !== undefined) statusOverrides[id]   = ov.status;
+        if (ov.priority !== undefined) priorityOverrides[id] = ov.priority;
+        if (ov.owner    !== undefined) ownerOverrides[id]    = ov.owner;
+        if (ov.due      !== undefined) dueOverrides[id]      = ov.due;
+        if (ov.title    !== undefined) titleOverrides[id]    = ov.title;
+      }
+      saveStatusOverrides(); savePriorityOverrides(); saveOwnerOverrides();
+      saveDueOverrides(); saveTitleOverrides();
+    }
+
+    // Apply subtasks
+    if (state.subtasks && typeof state.subtasks === 'object') {
+      for (const [id, list] of Object.entries(state.subtasks)) {
+        customSubtasks[id] = list;
+      }
+      saveCustomSubtasks();
+    }
+
+    // Apply deleted tasks
+    if (Array.isArray(state.deletedTasks)) {
+      for (const id of state.deletedTasks) {
+        if (!deletedTaskIds.includes(id)) deletedTaskIds.push(id);
+      }
+      saveDeletedTasks();
+    }
+
+    _lastFullStateFetch = Date.now();
+    console.log('[board] Loaded state from relay ✓');
+  } catch (err) {
+    console.warn('[board] Could not load board state from relay:', err.message);
+  }
+  render();
+}
+
+async function pushTaskOverrideToRelay(taskId, field, value) {
+  if (!relayEnabled()) return;
+  const base = getRelayApiBase();
+  if (!base) return;
+  try {
+    await fetch(`${base}/board-state`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tasks: { [taskId]: { [field]: value } } })
+    });
+  } catch (_) {}
+}
+
+async function pushSubtasksToRelay(taskId, list) {
+  if (!relayEnabled()) return;
+  const base = getRelayApiBase();
+  if (!base) return;
+  try {
+    await fetch(`${base}/board-state`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subtasks: { [taskId]: list } })
+    });
+  } catch (_) {}
+}
+
+async function pushDeletionToRelay(taskId) {
+  if (!relayEnabled()) return;
+  const base = getRelayApiBase();
+  if (!base) return;
+  try {
+    await fetch(`${base}/board-state/task/${taskId}`, { method: 'DELETE' });
+  } catch (_) {}
+}
+
 // ── Board write-back (Mimir → board) ──────────────────────────
 let _lastBoardUpdateCheck = Date.now() - 60000; // look back 60s on first poll
 let _boardUpdatePollTimer = null;
@@ -4173,6 +4270,13 @@ async function syncBoardUpdates() {
   if (!relayEnabled()) return;
   const base = getRelayApiBase();
   if (!base) return;
+
+  // Full state re-sync every 30s — catches anything missed by incremental polling
+  if (Date.now() - _lastFullStateFetch > 30000) {
+    await fetchBoardStateFromRelay();
+    return;
+  }
+
   try {
     const res = await fetch(`${base}/board-updates?since=${_lastBoardUpdateCheck}`);
     if (!res.ok) return;
@@ -4665,13 +4769,17 @@ function filterPriority(priority, btn) {
     sessionStorage.setItem('jag_auth', '1');
     document.getElementById('pwGate').style.display = 'none';
     document.getElementById('boardWrap').classList.add('unlocked');
-    try {
-      render();
-      switchTopTab(activeTopTab);
-      checkHashRoute();
-    } catch (e) {
-      console.error('Board render error after unlock:', e);
-    }
+    // Fetch authoritative board state from relay first, then render
+    fetchBoardStateFromRelay().then(() => {
+      try {
+        switchTopTab(activeTopTab);
+        checkHashRoute();
+        startBoardUpdatePoll();
+        startDeleteRequestPoll();
+      } catch (e) {
+        console.error('Board init error after unlock:', e);
+      }
+    });
   }
 
   function checkPw() {
@@ -4702,9 +4810,12 @@ function filterPriority(priority, btn) {
   if (sessionStorage.getItem('jag_auth') === '1') {
     document.getElementById('pwGate').style.display = 'none';
     document.getElementById('boardWrap').classList.add('unlocked');
-    render();
-    switchTopTab(activeTopTab);
-  checkHashRoute();
+    fetchBoardStateFromRelay().then(() => {
+      switchTopTab(activeTopTab);
+      checkHashRoute();
+      startBoardUpdatePoll();
+      startDeleteRequestPoll();
+    });
   }
 
   // Initial render — only called after auth
