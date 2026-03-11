@@ -141,6 +141,8 @@ body {
 .eff-table td,.eff-table th{ border-bottom:1px solid var(--border-subtle); padding:6px; text-align:left;}
 .eff-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
 .eff-refresh { border:1px solid var(--border); background:var(--bg-card); color:var(--text-primary); border-radius:8px; padding:5px 9px; cursor:pointer; font-size:12px; }
+.eff-cat-filter-badge { font-size:11px; background:rgba(126,231,255,0.12); border:1px solid rgba(126,231,255,0.4); border-radius:6px; padding:2px 8px; color:#7ee7ff; }
+.eff-cat-clear { border:none; background:transparent; color:#7ee7ff; cursor:pointer; font-size:11px; margin-left:4px; }
 .metrics-bar {
   display: flex;
   gap: 12px;
@@ -2853,7 +2855,73 @@ try { statusHistory = JSON.parse(localStorage.getItem(STATUS_HISTORY_KEY) || '{}
 try { completedAtMap = JSON.parse(localStorage.getItem(COMPLETED_AT_KEY) || '{}'); } catch (_) { completedAtMap = {}; }
 try { startedAtMap = JSON.parse(localStorage.getItem(STARTED_AT_KEY) || '{}'); } catch (_) { startedAtMap = {}; }
 try { categoryMap = JSON.parse(localStorage.getItem(CATEGORY_KEY) || '{}'); } catch (_) { categoryMap = {}; }
+const DEFAULT_CATEGORIES = {
+  'TSL-020': 'Operations',
+  'TSL-021': 'Sales',
+  'TSL-022': 'Operations',
+  'TSL-015': 'Marketing',
+  'TSL-016': 'Marketing',
+  'TSL-017': 'Operations',
+  'TSL-023': 'Management',
+  'TSL-024': 'Management',
+  'TSL-001': 'Management',
+  'TSL-003': 'Sales',
+  'TSL-004': 'Management',
+  'TSL-005': 'Management',
+  'TSL-006': 'Operations',
+  'TSL-025': 'Sales',
+  'TSL-026': 'Operations',
+  'TSL-027': 'Recruiting',
+  'TSL-028': 'Recruiting',
+  'TSL-007': 'Marketing',
+  'TSL-010': 'Recruiting',
+  'TSL-011': 'Recruiting',
+  'TSL-029': 'Operations',
+  'TSL-038': 'Recruiting',
+  'TSL-039': 'Management',
+  'TSL-040': 'Operations',
+  'TSL-041': 'Marketing',
+  'TSL-042': 'Marketing',
+  'JAG-045': 'Marketing',
+  'JAG-046': 'Sales',
+  'JAG-047': 'Sales',
+  'JAG-048': 'Management',
+  'JAG-064': 'Recruiting',
+  'JAG-044': 'Sales',
+  'TSL-043': 'Management',
+  'TSL-036': 'Marketing',
+  'TSL-037': 'Operations',
+  'TSL-030': 'Operations',
+  'TSL-031': 'Operations',
+  'TSL-032': 'Operations',
+  'TSL-033': 'Operations',
+  'TSL-034': 'Management',
+  'TSL-035': 'Operations',
+  'JAG-049': 'Recruiting',
+  'JAG-050': 'Marketing',
+  'JAG-051': 'Marketing',
+  'JAG-052': 'Management',
+  'JAG-053': 'Recruiting',
+  'JAG-054': 'Operations',
+  'JAG-055': 'Operations',
+  'JAG-056': 'Recruiting',
+  'JAG-057': 'Management',
+  'JAG-058': 'Management',
+  'JAG-059': 'Management',
+  'JAG-060': 'Operations',
+  'JAG-065': 'Operations',
+  'JAG-066': 'Operations',
+  'JAG-067': 'Marketing',
+  'JAG-068': 'Sales',
+};
+try {
+  const _savedCats = JSON.parse(localStorage.getItem(CATEGORY_KEY) || '{}');
+  const _mergedCats = Object.assign({}, DEFAULT_CATEGORIES, _savedCats);
+  localStorage.setItem(CATEGORY_KEY, JSON.stringify(_mergedCats));
+  categoryMap = _mergedCats;
+} catch (_) {}
 let activeTopTab = 'board';
+let activeCategoryFilter = null; // efficiency tab category drill-down
 let chartJsLoaded = false;
 let velocityChart = null;
 let categoryChart = null;
@@ -3969,6 +4037,11 @@ function checkHashRoute() {
   }
 }
 
+function clearCategoryFilter() {
+  activeCategoryFilter = null;
+  renderEfficiencyDashboard();
+}
+
 function ensureChartJs() {
   return new Promise((resolve) => {
     if (chartJsLoaded || window.Chart) { chartJsLoaded = true; return resolve(); }
@@ -4019,8 +4092,20 @@ function renderEfficiencyDashboard() {
   const startWeek = (() => { const d=new Date(now); const day=(d.getDay()+6)%7; d.setDate(d.getDate()-day); d.setHours(0,0,0,0); return d.getTime(); })();
   const startMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
-  const tasks = TASKS.filter(t => showHiddenTasks || !isTaskDeleted(t.id));
-  const doneEntries = Object.entries(completedAtMap).filter(([id]) => TASKS.find(t=>t.id===id));
+  const tasks = TASKS.filter(t => {
+    if (!showHiddenTasks && isTaskDeleted(t.id)) return false;
+    if (activeOwnerFilter !== 'all' && getTaskOwner(t) !== activeOwnerFilter) return false;
+    return true;
+  });
+  const ownerLabel = activeOwnerFilter === 'all' ? 'All Owners' : getOwnerLabel(activeOwnerFilter);
+  const catFilter = activeCategoryFilter;
+
+  const doneEntries = Object.entries(completedAtMap).filter(([id]) => {
+    const t = tasks.find(tt=>tt.id===id);
+    if (!t) return false;
+    if (catFilter && (categoryMap[id] || 'Uncategorized') !== catFilter) return false;
+    return true;
+  });
   const doneToday = doneEntries.filter(([,ts]) => ts >= startToday).length;
   const doneWeek = doneEntries.filter(([,ts]) => ts >= startWeek).length;
   const doneMonth = doneEntries.filter(([,ts]) => ts >= startMonth).length;
@@ -4034,7 +4119,7 @@ function renderEfficiencyDashboard() {
   const cyc = flowItems.filter(x => x.st && x.ct).map(x => (x.ct - x.st)/86400000);
   const lead = flowItems.filter(x => x.ct && x.histStart).map(x => (x.ct - x.histStart)/86400000);
   const avg = arr => arr.length ? (arr.reduce((a,b)=>a+b,0)/arr.length).toFixed(1) : '—';
-  const backlogTasks = tasks.filter(t => getEffectiveStatus(t)==='backlog');
+  const backlogTasks = tasks.filter(t => getEffectiveStatus(t)==='backlog' && (!catFilter || (categoryMap[t.id]||'Uncategorized')===catFilter));
   const backlogAges = backlogTasks.map(t => (Date.now() - getTaskHistoryStart(t))/86400000);
   const backlogAvg = backlogAges.length ? backlogAges.reduce((a,b)=>a+b,0)/backlogAges.length : null;
 
@@ -4067,7 +4152,7 @@ function renderEfficiencyDashboard() {
     return (x.ct - inprogEntry.ts) / 86400000;
   }).filter(v => v !== null && v >= 0);
 
-  const wipTasks = tasks.filter(t => ['inprogress','progress'].includes(getEffectiveStatus(t)));
+  const wipTasks = tasks.filter(t => ['inprogress','progress'].includes(getEffectiveStatus(t)) && (!catFilter || (categoryMap[t.id]||'Uncategorized')===catFilter));
   const staleWip = wipTasks.filter(t => {
     const hist = statusHistory[t.id] || [];
     const last = hist.length ? hist[hist.length-1] : null;
@@ -4085,7 +4170,14 @@ function renderEfficiencyDashboard() {
   const backlogColor = backlogAvg===null ? 'var(--text-secondary)' : (backlogAvg<7 ? '#69d18a' : backlogAvg<14 ? '#f6c56b' : '#ff8a8a');
 
   el.innerHTML = `
-    <div class="eff-header"><div class="eff-title" style="margin:0">Efficiency Dashboard</div><button class="eff-refresh" onclick="renderEfficiencyDashboard()">↻ Refresh</button></div>
+    <div class="eff-header">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="eff-title" style="margin:0">Efficiency Dashboard</div>
+        <span style="font-size:11px;color:var(--text-muted)">— ${ownerLabel}</span>
+        ${catFilter ? `<span class="eff-cat-filter-badge">Filtered by: ${catFilter} <button class="eff-cat-clear" onclick="clearCategoryFilter()">✕ clear</button></span>` : ''}
+      </div>
+      <button class="eff-refresh" onclick="renderEfficiencyDashboard()">↻ Refresh</button>
+    </div>
     <div class="eff-row">
       <div class="eff-card"><div class="eff-value" style="color:#69d18a">${doneToday}</div><div class="eff-label">Done Today</div></div>
       <div class="eff-card"><div class="eff-value" style="color:#69d18a">${doneWeek}</div><div class="eff-label">Done This Week</div></div>
@@ -4110,7 +4202,7 @@ function renderEfficiencyDashboard() {
     </div>
     <div class="eff-grid-2">
       <div class="eff-section"><div class="eff-title">Category Breakdown (Completed This Month)</div><canvas id="catChart" height="120"></canvas></div>
-      <div class="eff-section"><div class="eff-title">Category Table</div><table class="eff-table"><tr><th>Category</th><th>Done</th><th>Avg Cycle</th></tr>${catRows.map(([c,n])=>`<tr><td>${c}</td><td>${n}</td><td>${avg(flowItems.filter(x=> (categoryMap[x.id]||'Uncategorized')===c && x.st && x.ct).map(x=>(x.ct-x.st)/86400000))}</td></tr>`).join('')}</table></div>
+      <div class="eff-section"><div class="eff-title">Category Table</div><table class="eff-table"><tr><th>Category</th><th>Done</th><th>Avg Cycle</th></tr>${catRows.map(([c,n])=>`<tr style="cursor:pointer;${catFilter===c?'background:rgba(126,231,255,0.1)':''}" onclick="activeCategoryFilter=activeCategoryFilter==='${c}'?null:'${c}';renderEfficiencyDashboard()"><td>${catFilter===c?'▸ ':''}<strong>${c}</strong></td><td>${n}</td><td>${avg(flowItems.filter(x=> (categoryMap[x.id]||'Uncategorized')===c && x.st && x.ct).map(x=>(x.ct-x.st)/86400000))}</td></tr>`).join('')}</table></div>
     </div>
     <div class="eff-section"><div class="eff-title">Aging Backlog</div><table class="eff-table"><tr><th>Task Title</th><th>Days in Backlog</th><th>Priority</th><th>Owner</th></tr>${ageRows.slice(0,10).map(r=>`<tr><td>${r.title}</td><td style="color:${r.days<7?'#69d18a':r.days<14?'#f6c56b':'#ff8a8a'}">${r.days}</td><td>${r.priority}</td><td>${r.owner}</td></tr>`).join('')}</table>${ageRows.length>10?`<div class="eff-label" style="margin-top:6px">and ${ageRows.length-10} more…</div>`:''}</div>
     <div class="eff-section"><div class="eff-title">⚠ Stale In Progress (3+ days)</div>${staleWipRows.length===0?'<div class="eff-label">No stale WIP — looking good.</div>':`<table class="eff-table"><tr><th>Task Title</th><th>Stage</th><th>Days Stuck</th><th>Owner</th></tr>${staleWipRows.map(r=>`<tr><td>${r.title}</td><td>${r.stage}</td><td style="color:${r.days>=7?'#ff8a8a':'#f6c56b'}">${r.days}</td><td>${r.owner}</td></tr>`).join('')}</table>`}</div>
@@ -4126,7 +4218,7 @@ function renderEfficiencyDashboard() {
     const vctx=document.getElementById('velocityChart');
     if(vctx && window.Chart){ if(velocityChart) velocityChart.destroy(); velocityChart=new Chart(vctx,{type:'bar',data:{labels,datasets:[{label:'Done',data:vals,backgroundColor:'rgba(105,209,138,0.6)'},{type:'line',label:'7d avg',data:roll,borderColor:'#7ee7ff',borderWidth:1.5,pointRadius:0}]},options:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#8f93a7'}},y:{grid:{display:false},ticks:{color:'#8f93a7',precision:0}}}}}); }
     const cctx=document.getElementById('catChart');
-    if(cctx && window.Chart){ if(categoryChart) categoryChart.destroy(); categoryChart=new Chart(cctx,{type:'doughnut',data:{labels:catRows.map(x=>x[0]),datasets:[{data:catRows.map(x=>x[1]),backgroundColor:['#7ee7ff','#69d18a','#76b8ff','#f6c56b','#c084fc','#fb7185','#94a3b8','#f59e0b']}]},options:{plugins:{legend:{position:'right',labels:{color:'#b9bdd1'}}}}}); }
+    if(cctx && window.Chart){ if(categoryChart) categoryChart.destroy(); categoryChart=new Chart(cctx,{type:'doughnut',data:{labels:catRows.map(x=>x[0]),datasets:[{data:catRows.map(x=>x[1]),backgroundColor:['#7ee7ff','#69d18a','#76b8ff','#f6c56b','#c084fc','#fb7185','#94a3b8','#f59e0b']}]},options:{plugins:{legend:{position:'right',labels:{color:'#b9bdd1'}}},onClick:(e,elems)=>{ if(elems.length){ const cat=catRows[elems[0].index][0]; activeCategoryFilter = activeCategoryFilter===cat ? null : cat; renderEfficiencyDashboard(); }}}}); }
   });
 }
 
@@ -4143,6 +4235,7 @@ function filterOwner(owner, btn) {
   });
   btn.classList.add('active');
   render();
+  if (activeTopTab === 'efficiency') renderEfficiencyDashboard();
   checkHashRoute();
 }
 
