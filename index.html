@@ -1346,6 +1346,19 @@ body {
       Mimir Online
     </div>
     <div class="last-updated" id="lastUpdated">Updated: loading...</div>
+    <div style="position:relative;margin-left:12px;">
+      <button onclick="document.getElementById('relaySettingsPopup').style.display=document.getElementById('relaySettingsPopup').style.display==='flex'?'none':'flex'" style="background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 8px;color:var(--text-secondary);cursor:pointer;font-size:13px;" title="Relay Settings">⚙</button>
+      <div id="relaySettingsPopup" style="display:none;position:absolute;top:36px;right:0;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;z-index:999;flex-direction:column;gap:8px;min-width:340px;box-shadow:var(--shadow-hover);">
+        <label style="font-size:11px;color:var(--text-secondary);font-weight:600;letter-spacing:0.5px;">RELAY URL</label>
+        <input id="relayUrlInput" type="text" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 10px;color:var(--text-primary);font-size:13px;font-family:'Space Mono',monospace;width:100%;" />
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button onclick="setRelayUrl(document.getElementById('relayUrlInput').value);document.getElementById('relaySettingsPopup').style.display='none';fetchBoardStateFromRelay();alert('Relay URL saved!')" style="flex:1;background:var(--accent-blue);border:none;border-radius:var(--radius-sm);padding:6px;color:white;cursor:pointer;font-size:12px;font-weight:600;">Save</button>
+          <button onclick="document.getElementById('relayUrlInput').value=DEFAULT_RELAY_URL;setRelayUrl(DEFAULT_RELAY_URL);alert('Reset to default')" style="flex:1;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px;color:var(--text-secondary);cursor:pointer;font-size:12px;">Reset Default</button>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Current: <span id="relayUrlDisplay"></span></div>
+        <script>document.getElementById('relayUrlInput').value=getRelayUrl();document.getElementById('relayUrlDisplay').textContent=getRelayUrl();</script>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2823,10 +2836,11 @@ let dragTaskId = null;
 const RELAY_URL_KEY = 'jag_board_relay_url_v1';
 const RELAY_ENABLED_KEY = 'jag_board_relay_enabled_v1';
 
+const DEFAULT_RELAY_URL = 'https://packets-citations-plaintiff-senators.trycloudflare.com';
 function getRelayUrl() {
-  return 'https://clips-quebec-prefer-pulled.trycloudflare.com';
+  return localStorage.getItem(RELAY_URL_KEY) || DEFAULT_RELAY_URL;
 }
-function setRelayUrl(_v) {}
+function setRelayUrl(v) { localStorage.setItem(RELAY_URL_KEY, v); }
 function relayEnabled() { return true; }
 function setRelayEnabled(_v) {}
 
